@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Placement Tracker v5</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#0d1520;--panel:#111e2e;--card:#162033;--card2:#1a2640;
+  --accent:#3b82f6;--accent2:#1d4ed8;--orange:#f97316;--green:#22c55e;
+  --red:#ef4444;--purple:#a855f7;--teal:#06b6d4;--yellow:#eab308;
+  --text:#e2e8f0;--muted:#64748b;--border:#1e3050;--border2:#243858;
+  --inp:#0a1120;--tag-bg:#1e3a5c;--tag-txt:#7dd3fc;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* HEADER */
+.hdr{background:var(--panel);border-bottom:2px solid var(--accent);padding:14px 26px;
+  display:flex;justify-content:space-between;align-items:center;
+  box-shadow:0 4px 20px rgba(0,0,0,.4);position:sticky;top:0;z-index:30;}
+.hdr h1{font-size:18px;font-weight:800;} .hdr h1 span{color:var(--accent);}
+.hdr-sub{font-size:11px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:8px;}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 6px var(--green);animation:pulse 2s infinite;}
+.sync-dot.off{background:var(--muted);box-shadow:none;animation:none;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.hdr-btns{display:flex;gap:8px;align-items:center;}
+.btn{border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;transition:.15s;font-family:inherit;}
+.btn-p{background:var(--accent);color:#fff;} .btn-p:hover{background:var(--accent2);}
+.btn-o{background:transparent;color:var(--text);border:1.5px solid var(--border2);}
+.btn-o:hover{border-color:var(--accent);color:var(--accent);}
+.btn-g{background:rgba(34,197,94,.12);color:var(--green);border:1.5px solid rgba(34,197,94,.3);}
+.btn-g:hover{background:rgba(34,197,94,.2);}
+
+/* SEARCH BAR */
+.sbar{background:var(--panel);padding:10px 26px;border-bottom:1px solid var(--border);
+  display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.sbar label{font-size:11px;color:var(--muted);font-weight:700;white-space:nowrap;}
+.sbar input,.sbar select{background:var(--inp);color:var(--text);border:1.5px solid var(--border2);
+  border-radius:7px;padding:6px 10px;font-size:12px;font-family:inherit;transition:.15s;}
+.sbar input:focus,.sbar select:focus{outline:none;border-color:var(--accent);}
+.sg{display:flex;align-items:center;gap:6px;position:relative;}
+/* student autocomplete */
+.s-dd{position:absolute;top:calc(100%+4px);left:0;min-width:240px;background:var(--card2);
+  border:1.5px solid var(--accent);border-radius:8px;z-index:70;max-height:220px;overflow-y:auto;
+  display:none;box-shadow:0 12px 32px rgba(0,0,0,.5);}
+.s-dd.open{display:block;}
+.s-opt{padding:8px 14px;font-size:12px;cursor:pointer;color:var(--text);transition:.1s;}
+.s-opt:hover,.s-opt.focused{background:rgba(59,130,246,.15);color:var(--accent);}
+.s-opt .s-meta{font-size:10px;color:var(--muted);}
+/* company autocomplete */
+.c-dd{position:absolute;top:calc(100%+4px);left:0;min-width:220px;background:var(--card2);
+  border:1.5px solid var(--teal);border-radius:8px;z-index:70;max-height:200px;overflow-y:auto;
+  display:none;box-shadow:0 12px 32px rgba(0,0,0,.5);}
+.c-dd.open{display:block;}
+.c-opt{padding:8px 14px;font-size:12px;cursor:pointer;color:var(--text);transition:.1s;}
+.c-opt:hover,.c-opt.focused{background:rgba(6,182,212,.15);color:var(--teal);}
+.c-opt mark{background:rgba(6,182,212,.2);color:#67e8f9;border-radius:2px;padding:0 2px;}
+.active-tag{display:flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;
+  font-size:11px;font-weight:600;}
+.tag-stu{background:rgba(59,130,246,.15);color:#93c5fd;border:1px solid #1e4d7a;}
+.tag-co{background:rgba(6,182,212,.1);color:#67e8f9;border:1px solid rgba(6,182,212,.3);}
+.active-tag button{background:none;border:none;cursor:pointer;font-size:13px;padding:0 0 0 3px;}
+.tag-stu button{color:#60a5fa;} .tag-stu button:hover{color:var(--red);}
+.tag-co button{color:#22d3ee;} .tag-co button:hover{color:var(--red);}
+.freset{background:rgba(239,68,68,.1);border:1.5px solid rgba(239,68,68,.3);color:#f87171;
+  padding:5px 12px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;}
+.freset:hover{background:rgba(239,68,68,.2);}
+.fcount{margin-left:auto;background:rgba(59,130,246,.08);color:var(--accent);
+  border:1px solid rgba(59,130,246,.2);padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700;}
+
+/* KPI GRID */
+.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;padding:16px 26px 0;}
+.kpi{background:var(--card);border-radius:12px;padding:14px 16px;border-top:3px solid var(--border);
+  cursor:pointer;transition:.2s;position:relative;overflow:hidden;user-select:none;}
+.kpi::before{content:'';position:absolute;right:-15px;top:-15px;width:70px;height:70px;
+  border-radius:50%;opacity:.07;}
+.kpi:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.4);}
+.kpi.active{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.4);}
+.kpi.c-blue{border-color:var(--accent);color:var(--accent);}
+.kpi.c-blue::before,.kpi.c-blue.active{outline:2px solid var(--accent);}
+.kpi.c-teal{border-color:var(--teal);color:var(--teal);}
+.kpi.c-teal.active{outline:2px solid var(--teal);}
+.kpi.c-orange{border-color:var(--orange);color:var(--orange);}
+.kpi.c-orange.active{outline:2px solid var(--orange);}
+.kpi.c-green{border-color:var(--green);color:var(--green);}
+.kpi.c-green.active{outline:2px solid var(--green);}
+.kpi.c-red{border-color:var(--red);color:var(--red);}
+.kpi.c-red.active{outline:2px solid var(--red);}
+.kpi.c-purple{border-color:var(--purple);color:var(--purple);}
+.kpi.c-purple.active{outline:2px solid var(--purple);}
+.kpi::before{background:currentColor;}
+.kpi-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;}
+.kpi-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;
+  display:flex;align-items:center;gap:4px;flex:1;min-width:0;}
+.kpi-lbl-inp{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+  background:rgba(59,130,246,.1);border:1.5px solid var(--accent);border-radius:4px;
+  color:var(--text);padding:2px 6px;font-family:inherit;display:none;width:100%;}
+.elbl{background:none;border:none;cursor:pointer;color:var(--border2);font-size:11px;
+  padding:1px 3px;border-radius:3px;opacity:0;transition:.15s;flex-shrink:0;}
+.kpi:hover .elbl{opacity:1;} .elbl:hover{color:var(--accent);}
+.kpi-val{font-size:26px;font-weight:900;line-height:1;}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:3px;}
+.kpi-hint{font-size:9px;color:var(--border2);margin-top:4px;}
+
+/* PROFILE CARD (student or company result) */
+.result-area{padding:14px 26px 0;display:none;}
+.result-area.show{display:block;}
+.profile-card{background:var(--card);border-radius:14px;border:1px solid var(--border2);
+  box-shadow:0 4px 20px rgba(0,0,0,.3);overflow:hidden;}
+.pc-hdr{background:linear-gradient(135deg,#0a1628,#162540,#1a3560);border-bottom:2px solid var(--accent);
+  padding:16px 22px;display:flex;justify-content:space-between;align-items:flex-start;}
+.pc-name{font-size:17px;font-weight:800;color:var(--text);}
+.pc-meta{font-size:11px;color:var(--muted);margin-top:3px;}
+.pc-close{background:rgba(255,255,255,.08);border:1px solid var(--border2);width:26px;height:26px;
+  border-radius:50%;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;
+  color:var(--muted);transition:.15s;}
+.pc-close:hover{background:rgba(239,68,68,.15);color:var(--red);}
+.pc-body{display:grid;grid-template-columns:repeat(3,1fr);gap:0;padding:0;}
+.pc-col{padding:16px 20px;border-right:1px solid var(--border);}
+.pc-col:last-child{border-right:none;}
+.pc-col-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.pc-col-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
+.pc-count{font-size:18px;font-weight:900;}
+.c-app{color:var(--accent);} .c-gd{color:var(--orange);} .c-int{color:var(--green);}
+.pc-list{list-style:none;max-height:180px;overflow-y:auto;}
+.pc-list li{font-size:11.5px;color:var(--text);padding:5px 8px;border-radius:6px;
+  display:flex;align-items:center;gap:7px;transition:.1s;cursor:default;}
+.pc-list li:hover{background:rgba(255,255,255,.04);}
+.pc-list li .co-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.pc-list.empty-list{color:var(--muted);font-size:11.5px;font-style:italic;padding:4px 8px;}
+/* company search result */
+.co-result{padding:16px 22px;}
+.co-result-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.5px;margin-bottom:12px;}
+.co-student-list{display:flex;flex-wrap:wrap;gap:8px;}
+.co-stu-chip{background:var(--card2);border:1px solid var(--border2);border-radius:8px;
+  padding:8px 14px;cursor:pointer;transition:.15s;}
+.co-stu-chip:hover{border-color:var(--teal);background:rgba(6,182,212,.08);}
+.co-stu-chip .csn{font-size:12.5px;font-weight:700;color:var(--text);}
+.co-stu-chip .csm{font-size:10px;color:var(--muted);margin-top:2px;}
+.stage-badge{display:inline-block;padding:1px 6px;border-radius:3px;font-size:9.5px;font-weight:700;margin-left:4px;}
+.sb-app{background:rgba(59,130,246,.15);color:#93c5fd;}
+.sb-gd{background:rgba(249,115,22,.15);color:#fdba74;}
+.sb-int{background:rgba(34,197,94,.15);color:#86efac;}
+
+/* CHARTS */
+.sec-lbl{padding:16px 26px 6px;font-size:10.5px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:1px;}
+.charts-row{display:grid;gap:14px;padding:0 26px;}
+.c2{grid-template-columns:2fr 1fr;}
+.panel{background:var(--card);border-radius:12px;padding:18px 20px;
+  border:1px solid var(--border);box-shadow:0 2px 12px rgba(0,0,0,.2);}
+.ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.pt{font-size:12.5px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px;}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+.ps{font-size:11px;color:var(--muted);}
+
+/* COMPANIES PANEL */
+.co-panel{background:var(--card);border-radius:12px;padding:18px 20px;border:1px solid var(--border);}
+.co-panel .co-grid{display:flex;flex-wrap:wrap;gap:6px;max-height:240px;overflow-y:auto;margin-top:12px;}
+.co-chip{background:var(--card2);border:1px solid var(--border2);border-radius:6px;
+  padding:4px 10px;font-size:11px;color:var(--text);cursor:pointer;transition:.15s;white-space:nowrap;}
+.co-chip:hover{border-color:var(--teal);color:var(--teal);}
+.co-panel-hdr{display:flex;justify-content:space-between;align-items:center;}
+.co-total{font-size:28px;font-weight:900;color:var(--teal);}
+
+/* TABLE */
+.tbl-sec{padding:14px 26px 28px;}
+.tbl-panel{background:var(--card);border-radius:12px;border:1px solid var(--border);overflow:hidden;}
+.tbl-ph{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;
+  border-bottom:1px solid var(--border);}
+.tbl-title{font-size:12.5px;font-weight:700;color:var(--text);}
+.tbl-hint{font-size:11px;color:var(--muted);}
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+thead th{background:#0a1220;color:var(--muted);font-weight:700;text-transform:uppercase;
+  font-size:10px;letter-spacing:.5px;padding:10px 13px;text-align:left;
+  border-bottom:2px solid var(--accent);white-space:nowrap;}
+tbody td{padding:0;border-bottom:1px solid var(--border);}
+.td-inner{padding:9px 13px;white-space:nowrap;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover td .td-inner{background:rgba(59,130,246,.04);}
+/* Expanded row */
+.exp-row td{border-bottom:none;background:rgba(59,130,246,.04);}
+.expand-panel{padding:0 13px 14px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.exp-col{background:var(--card2);border-radius:8px;padding:12px 14px;border:1px solid var(--border2);}
+.exp-col-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;}
+.exp-chips{display:flex;flex-wrap:wrap;gap:5px;}
+.exp-chip{font-size:10.5px;padding:2px 8px;border-radius:4px;
+  border:1px solid var(--border2);background:var(--card);}
+.exp-chip.app{border-color:rgba(59,130,246,.3);color:#93c5fd;}
+.exp-chip.gd{border-color:rgba(249,115,22,.3);color:#fdba74;}
+.exp-chip.iv{border-color:rgba(34,197,94,.3);color:#86efac;}
+.exp-empty{font-size:11px;color:var(--muted);font-style:italic;}
+/* clickable student name */
+.stu-name-btn{background:none;border:none;color:var(--text);font-weight:700;font-size:12px;
+  cursor:pointer;padding:0;text-align:left;text-decoration:underline;text-decoration-style:dotted;
+  text-underline-offset:3px;transition:.15s;}
+.stu-name-btn:hover{color:var(--accent);}
+.expand-arrow{display:inline-block;transition:transform .2s;font-size:10px;margin-left:4px;color:var(--muted);}
+.expand-arrow.open{transform:rotate(90deg);}
+/* inline editing */
+.editable{cursor:pointer;border-bottom:1px dashed var(--border2);padding-bottom:1px;}
+.editable:hover{color:var(--accent);border-bottom-color:var(--accent);}
+.inline-inp{background:var(--inp);color:var(--text);border:1.5px solid var(--accent);
+  border-radius:5px;padding:2px 6px;font-size:12px;font-family:inherit;width:60px;}
+/* pills */
+.pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;}
+.ph2{background:rgba(34,197,94,.1);color:var(--green);}
+.pm{background:rgba(249,115,22,.1);color:var(--orange);}
+.pl{background:rgba(239,68,68,.1);color:var(--red);}
+.nb{font-weight:800;font-size:13px;}
+.bl{color:var(--accent);} .or{color:var(--orange);} .gr{color:var(--green);}
+.nc{color:var(--text);}
+.pw{display:flex;align-items:center;gap:6px;min-width:90px;}
+.pb{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+.pf{height:100%;border-radius:2px;}
+.abts{display:flex;gap:4px;}
+.eb,.db{border:none;border-radius:5px;padding:3px 8px;font-size:10.5px;font-weight:700;cursor:pointer;transition:.15s;}
+.eb{background:rgba(59,130,246,.1);color:var(--accent);} .eb:hover{background:rgba(59,130,246,.2);}
+.db{background:rgba(239,68,68,.08);color:var(--red);} .db:hover{background:rgba(239,68,68,.18);}
+
+/* DRAWER (card drill-down) */
+.dov{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:80;display:none;backdrop-filter:blur(2px);}
+.dov.open{display:block;}
+.drawer{position:fixed;right:0;top:0;height:100vh;width:390px;max-width:95vw;
+  background:var(--panel);z-index:90;display:flex;flex-direction:column;
+  border-left:1px solid var(--border);box-shadow:-8px 0 40px rgba(0,0,0,.5);
+  transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);}
+.drawer.open{transform:translateX(0);}
+.dhdr{padding:16px 20px 12px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.dhdr-top{display:flex;justify-content:space-between;align-items:flex-start;}
+.dtitle{font-size:15px;font-weight:800;} .dcount{font-size:11px;color:var(--muted);margin-top:2px;}
+.dclose{background:rgba(255,255,255,.05);border:1px solid var(--border2);width:28px;height:28px;
+  border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;
+  justify-content:center;color:var(--muted);transition:.15s;}
+.dclose:hover{background:rgba(239,68,68,.15);color:var(--red);}
+.dsrch{padding:8px 18px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.dsrch input{width:100%;background:var(--inp);color:var(--text);border:1.5px solid var(--border2);
+  border-radius:7px;padding:6px 10px;font-size:12px;font-family:inherit;}
+.dsrch input:focus{outline:none;border-color:var(--accent);}
+.dbody{flex:1;overflow-y:auto;}
+.ds{padding:11px 18px;border-bottom:1px solid var(--border);transition:.15s;}
+.ds:hover{background:rgba(59,130,246,.04);}
+.ds-name{font-weight:700;font-size:12.5px;margin-bottom:4px;}
+.ds-pills{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:5px;}
+.dp{padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;}
+.dp-a{background:rgba(59,130,246,.12);color:#93c5fd;}
+.dp-g{background:rgba(249,115,22,.12);color:#fdba74;}
+.dp-i{background:rgba(34,197,94,.12);color:#86efac;}
+.dp-z{background:rgba(239,68,68,.12);color:#fca5a5;}
+.ds-act{margin-top:6px;}
+.ds-eb{background:rgba(59,130,246,.1);color:var(--accent);border:none;border-radius:5px;
+  padding:3px 10px;font-size:10.5px;font-weight:700;cursor:pointer;transition:.15s;}
+.ds-eb:hover{background:rgba(59,130,246,.2);}
+.dempty{padding:40px 20px;text-align:center;color:var(--muted);}
+.dempty .big{font-size:32px;margin-bottom:8px;}
+
+/* MODAL */
+.mov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;
+  align-items:center;justify-content:center;backdrop-filter:blur(3px);}
+.mov.open{display:flex;}
+.modal{background:var(--panel);border-radius:16px;width:590px;max-width:96vw;
+  border:1px solid var(--border2);box-shadow:0 24px 64px rgba(0,0,0,.6);
+  overflow:hidden;animation:su .22s ease;}
+@keyframes su{from{transform:translateY(24px);opacity:0}to{transform:translateY(0);opacity:1}}
+.mhdr{background:linear-gradient(135deg,#0a1628,#162540,#1a3560);border-bottom:2px solid var(--accent);
+  padding:16px 22px;display:flex;justify-content:space-between;align-items:center;}
+.mhdr h2{font-size:15px;font-weight:800;} .mhdr p{font-size:11px;color:var(--muted);margin-top:2px;}
+.mcls{background:rgba(255,255,255,.08);border:none;color:var(--muted);width:28px;height:28px;
+  border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:.15s;}
+.mcls:hover{background:rgba(239,68,68,.2);color:var(--red);}
+.mbody{padding:20px 22px;max-height:70vh;overflow-y:auto;}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.fg.full{grid-template-columns:1fr;}
+.field{display:flex;flex-direction:column;gap:4px;}
+.field label{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.field input,.field select,.field textarea{background:var(--inp);color:var(--text);
+  border:1.5px solid var(--border2);border-radius:8px;padding:8px 10px;
+  font-size:12.5px;font-family:inherit;transition:.15s;}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent);}
+.field textarea{resize:vertical;min-height:56px;}
+.field .hint{font-size:10px;color:var(--muted);}
+.err{color:var(--red);font-size:10.5px;display:none;margin-top:2px;}
+.mftr{padding:13px 22px;background:rgba(0,0,0,.2);border-top:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center;gap:10px;}
+.ss{font-size:11px;color:var(--muted);}
+.btn-save{background:var(--accent);color:#fff;border:none;padding:8px 20px;
+  border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;transition:.15s;}
+.btn-save:hover{background:var(--accent2);}
+.btn-cancel{background:transparent;color:var(--muted);border:1.5px solid var(--border2);
+  padding:8px 14px;border-radius:8px;font-size:12.5px;cursor:pointer;transition:.15s;}
+.btn-cancel:hover{border-color:var(--muted);color:var(--text);}
+/* student selector */
+.stu-sel{position:relative;}
+.stu-btn{width:100%;background:var(--inp);color:var(--text);border:1.5px solid var(--border2);
+  border-radius:8px;padding:8px 10px;font-size:12.5px;font-family:inherit;cursor:pointer;
+  display:flex;justify-content:space-between;align-items:center;transition:.15s;text-align:left;}
+.stu-btn:focus,.stu-btn.open{outline:none;border-color:var(--accent);}
+.stu-dd-m{position:absolute;top:calc(100%+4px);left:0;right:0;background:var(--card2);
+  border:1.5px solid var(--accent);border-radius:8px;z-index:200;max-height:220px;
+  overflow-y:auto;display:none;box-shadow:0 16px 40px rgba(0,0,0,.6);}
+.stu-dd-m.open{display:block;}
+.sdd-search{padding:7px 9px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--card2);}
+.sdd-search input{width:100%;background:var(--inp);color:var(--text);border:1px solid var(--border2);
+  border-radius:6px;padding:5px 9px;font-size:12px;font-family:inherit;}
+.sdd-search input:focus{outline:none;border-color:var(--accent);}
+.sdd-opt{padding:8px 14px;font-size:12px;cursor:pointer;color:var(--text);transition:.1s;}
+.sdd-opt:hover,.sdd-opt.focused{background:rgba(59,130,246,.12);color:var(--accent);}
+.sdd-opt .sm{font-size:10px;color:var(--muted);}
+.sdd-new{color:var(--green);border-top:1px solid var(--border);}
+/* tag input */
+.tw{background:var(--inp);border:1.5px solid var(--border2);border-radius:8px;
+  padding:5px 8px;min-height:42px;display:flex;flex-wrap:wrap;gap:4px;
+  cursor:text;transition:.15s;position:relative;}
+.tw:focus-within{border-color:var(--accent);}
+.tc{display:flex;align-items:center;gap:3px;background:var(--tag-bg);
+  border:1px solid #1e4d7a;border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600;color:var(--tag-txt);}
+.tc button{background:none;border:none;color:#60a5fa;cursor:pointer;font-size:11px;}
+.tc button:hover{color:var(--red);}
+.ti{background:transparent;border:none;outline:none;color:var(--text);
+  font-size:12px;font-family:inherit;min-width:80px;flex:1;}
+.tdd{position:absolute;top:calc(100%+3px);left:0;right:0;background:var(--card2);
+  border:1.5px solid var(--accent);border-radius:8px;z-index:250;max-height:160px;
+  overflow-y:auto;display:none;box-shadow:0 12px 32px rgba(0,0,0,.6);}
+.tdd.open{display:block;}
+.to{padding:7px 13px;font-size:12px;cursor:pointer;color:var(--text);transition:.1s;}
+.to:hover,.to.focused{background:rgba(59,130,246,.12);color:#93c5fd;}
+.to.used{opacity:.4;pointer-events:none;}
+.to mark{background:rgba(59,130,246,.2);color:#93c5fd;border-radius:2px;padding:0 2px;}
+.to-new{color:var(--green);border-top:1px solid var(--border);}
+.to-empty{padding:8px 13px;font-size:11px;color:var(--muted);font-style:italic;}
+
+/* EXCEL MODAL */
+.xl-drop{border:2px dashed var(--border2);border-radius:10px;padding:28px;text-align:center;
+  cursor:pointer;transition:.15s;background:var(--inp);}
+.xl-drop:hover,.xl-drop.drag{border-color:var(--accent);background:rgba(59,130,246,.05);}
+.xl-drop .big{font-size:36px;margin-bottom:8px;}
+.xl-drop p{font-size:13px;color:var(--muted);}
+.xl-drop p span{color:var(--accent);font-weight:700;}
+#xlFile{display:none;}
+.xl-preview{margin-top:14px;background:var(--inp);border-radius:8px;padding:10px 14px;
+  font-size:11.5px;color:var(--muted);max-height:120px;overflow-y:auto;display:none;}
+
+/* TOAST */
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
+  background:var(--card2);color:var(--text);border:1px solid var(--border2);
+  padding:9px 18px;border-radius:10px;font-size:12.5px;font-weight:600;
+  box-shadow:0 8px 28px rgba(0,0,0,.5);z-index:500;display:none;white-space:nowrap;
+  animation:fu .3s ease;}
+@keyframes fu{from{opacity:0;transform:translateX(-50%) translateY(8px)}
+  to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--panel);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+
+@media(max-width:1100px){
+  .kpi-grid{grid-template-columns:repeat(3,1fr);}
+  .charts-row.c2{grid-template-columns:1fr;}
+  .pc-body{grid-template-columns:1fr;}
+  .pc-col{border-right:none;border-bottom:1px solid var(--border);}
+  .expand-panel{grid-template-columns:1fr;}
+}
+@media(max-width:600px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr);}
+  .drawer{width:100vw;}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div>
+    <h1>📋 Placement <span>Tracker</span></h1>
+    <div class="hdr-sub">
+      <span class="sync-dot" id="syncDot"></span>
+      <span id="syncStatus">Loading…</span>
+      · Last sync: <span id="syncTime">—</span>
+    </div>
+  </div>
+  <div class="hdr-btns">
+    <button class="btn btn-o" onclick="clearAllStudents()" style="color:var(--red); border-color:rgba(239,68,68,0.3)">🗑 Clear All</button>
+    <button class="btn btn-o" onclick="openXLModal()">📂 Upload Excel</button>
+    <button class="btn btn-o" onclick="exportCSV()">⬇ Export CSV</button>
+    <button class="btn btn-p" onclick="openModal()">＋ Add / Update Student</button>
+  </div>
+</div>
+
+<!-- SEARCH BAR -->
+<div class="sbar">
+  <!-- Student search -->
+  <div class="sg" id="stuWrap">
+    <label>🎓 Student:</label>
+    <input type="text" id="stuSearch" placeholder="Search student…" style="min-width:160px"
+      autocomplete="off" oninput="onStuInput()" onfocus="onStuInput()" onkeydown="onStuKey(event)"/>
+    <div class="s-dd" id="stuDd"></div>
+  </div>
+  <div id="stuTag" style="display:none;"></div>
+
+  <!-- Company search -->
+  <div class="sg" id="coWrap">
+    <label>🏢 Company:</label>
+    <input type="text" id="coSearch" placeholder="Search company…" style="min-width:160px"
+      autocomplete="off" oninput="onCoInput()" onfocus="onCoInput()" onkeydown="onCoKey(event)"/>
+    <div class="c-dd" id="coDd"></div>
+  </div>
+  <div id="coTag" style="display:none;"></div>
+
+  <div class="sg"><label>Min Apps:</label>
+    <select id="fMin" onchange="render()" style="min-width:75px">
+      <option value="0">All</option><option value="10">≥10</option>
+      <option value="15">≥15</option><option value="20">≥20</option>
+    </select></div>
+
+  <div class="sg"><label>Stage:</label>
+    <select id="fStage" onchange="render()" style="min-width:110px">
+      <option value="all">All</option>
+      <option value="interview">Got Interview</option>
+      <option value="no_interview">No Interview</option>
+      <option value="gd_only">GD Only</option>
+    </select></div>
+
+  <button class="freset" onclick="resetFilters()">↺ Reset</button>
+  <div class="fcount">Showing <b id="showCount">20</b> / <b id="totalCount">20</b></div>
+</div>
+
+<!-- KPI GRID -->
+<div class="kpi-grid">
+  <div class="kpi c-blue" id="kpi-total" onclick="openDrawer('total')">
+    <div class="kpi-top">
+      <div style="flex:1;min-width:0">
+        <div class="kpi-lbl" id="lbl-total">Total Students <button class="elbl" onclick="editLbl(event,'total')">✎</button></div>
+        <input class="kpi-lbl-inp" id="inp-total" onblur="saveLbl('total')" onkeydown="lblKey(event,'total')"/>
+      </div>
+    </div>
+    <div class="kpi-val" id="kStu">—</div><div class="kpi-sub">in cohort</div>
+    <div class="kpi-hint">🖱 click to see list</div>
+  </div>
+  <div class="kpi c-teal" id="kpi-apps" onclick="openDrawer('apps')">
+    <div class="kpi-top"><div style="flex:1;min-width:0">
+      <div class="kpi-lbl" id="lbl-apps">Applications <button class="elbl" onclick="editLbl(event,'apps')">✎</button></div>
+      <input class="kpi-lbl-inp" id="inp-apps" onblur="saveLbl('apps')" onkeydown="lblKey(event,'apps')"/>
+    </div></div>
+    <div class="kpi-val" id="kApp">—</div><div class="kpi-sub">total sent</div>
+    <div class="kpi-hint">🖱 click to see list</div>
+  </div>
+  <div class="kpi c-orange" id="kpi-gd" onclick="openDrawer('gd')">
+    <div class="kpi-top"><div style="flex:1;min-width:0">
+      <div class="kpi-lbl" id="lbl-gd">GD Rounds <button class="elbl" onclick="editLbl(event,'gd')">✎</button></div>
+      <input class="kpi-lbl-inp" id="inp-gd" onblur="saveLbl('gd')" onkeydown="lblKey(event,'gd')"/>
+    </div></div>
+    <div class="kpi-val" id="kGD">—</div><div class="kpi-sub" id="kGDpct">—</div>
+    <div class="kpi-hint">🖱 click to see list</div>
+  </div>
+  <div class="kpi c-green" id="kpi-int" onclick="openDrawer('int')">
+    <div class="kpi-top"><div style="flex:1;min-width:0">
+      <div class="kpi-lbl" id="lbl-int">Interviews <button class="elbl" onclick="editLbl(event,'int')">✎</button></div>
+      <input class="kpi-lbl-inp" id="inp-int" onblur="saveLbl('int')" onkeydown="lblKey(event,'int')"/>
+    </div></div>
+    <div class="kpi-val" id="kInt">—</div><div class="kpi-sub" id="kIntPct">—</div>
+    <div class="kpi-hint">🖱 click to see list</div>
+  </div>
+  <div class="kpi c-red" id="kpi-zero" onclick="openDrawer('zero')">
+    <div class="kpi-top"><div style="flex:1;min-width:0">
+      <div class="kpi-lbl" id="lbl-zero">Zero Interviews <button class="elbl" onclick="editLbl(event,'zero')">✎</button></div>
+      <input class="kpi-lbl-inp" id="inp-zero" onblur="saveLbl('zero')" onkeydown="lblKey(event,'zero')"/>
+    </div></div>
+    <div class="kpi-val" id="kZero">—</div><div class="kpi-sub">need support</div>
+    <div class="kpi-hint">🖱 click to filter below</div>
+  </div>
+  <div class="kpi c-purple" id="kpi-conv" onclick="openDrawer('conv')">
+    <div class="kpi-top"><div style="flex:1;min-width:0">
+      <div class="kpi-lbl" id="lbl-conv">GD→Interview <button class="elbl" onclick="editLbl(event,'conv')">✎</button></div>
+      <input class="kpi-lbl-inp" id="inp-conv" onblur="saveLbl('conv')" onkeydown="lblKey(event,'conv')"/>
+    </div></div>
+    <div class="kpi-val" id="kConv">—</div><div class="kpi-sub">conversion</div>
+    <div class="kpi-hint">🖱 click to see list</div>
+  </div>
+</div>
+
+<!-- STUDENT / COMPANY RESULT CARD -->
+<div class="result-area" id="resultArea">
+  <!-- filled by JS -->
+</div>
+
+<!-- CHARTS + COMPANIES -->
+<div class="sec-lbl">📈 Analytics</div>
+<div class="charts-row c2">
+  <div class="panel">
+    <div class="ph">
+      <div class="pt"><span class="dot" style="background:var(--accent)"></span>Application Funnel per Student</div>
+      <div class="ps">Applied → GD → Interview</div>
+    </div>
+    <div style="height:260px"><canvas id="funnelChart"></canvas></div>
+  </div>
+  <div class="co-panel" id="coPanelEl">
+    <div class="co-panel-hdr">
+      <div class="pt"><span class="dot" style="background:var(--teal)"></span>Total Companies Visited</div>
+      <div class="co-total" id="coTotal">—</div>
+    </div>
+    <div class="ps" style="margin-top:4px">Click any company to see who applied</div>
+    <div class="co-grid" id="coGrid"></div>
+  </div>
+</div>
+
+<!-- TABLE -->
+<div class="sec-lbl" style="margin-top:14px" id="tableSec">👤 Student Records
+  <span id="tableFilter" style="font-size:10px;color:var(--accent);margin-left:8px;display:none;">
+    (filtered by card — <button onclick="clearCardFilter()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:10px;text-decoration:underline;">clear</button>)
+  </span>
+</div>
+<div class="tbl-sec">
+  <div class="tbl-panel">
+    <div class="tbl-ph">
+      <div class="tbl-title">Click a student name to expand company details · Click numbers to edit inline</div>
+      <div class="tbl-hint" id="tblCount"></div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Student Name</th><th>Applied</th><th>GD</th><th>Interviews</th>
+          <th>GD Rate</th><th>Int. Rate</th><th>GD→Int.</th><th>Progress</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- CARD DRAWER -->
+<div class="dov" id="dov" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="dhdr">
+    <div class="dhdr-top">
+      <div><div class="dtitle" id="dTitle">Students</div><div class="dcount" id="dCount"></div></div>
+      <button class="dclose" onclick="closeDrawer()">✕</button>
+    </div>
+  </div>
+  <div class="dsrch"><input type="text" id="dSearch" placeholder="🔍 Search…" oninput="renderDrawer()"/></div>
+  <div class="dbody" id="dbody"></div>
+</div>
+
+<!-- ADD/EDIT STUDENT MODAL -->
+<div class="mov" id="mov" onclick="movClick(event)">
+  <div class="modal">
+    <div class="mhdr">
+      <div><h2 id="mTitle">Add / Update Student</h2><p id="mSub">Select student or add new</p></div>
+      <button class="mcls" onclick="closeModal()">✕</button>
+    </div>
+    <div class="mbody">
+      <div class="fg full" style="margin-bottom:12px">
+        <div class="field">
+          <label>Student Name *</label>
+          <div class="stu-sel">
+            <button class="stu-btn" id="stuModalBtn" onclick="toggleStuDd()" type="button">
+              <span id="stuModalTxt" style="color:var(--muted)">Select or add new…</span><span>▾</span>
+            </button>
+            <div class="stu-dd-m" id="stuModalDd">
+              <div class="sdd-search"><input type="text" id="stuModalSrch" placeholder="Search…" oninput="filterStuOpts()" onclick="event.stopPropagation()"/></div>
+              <div id="stuModalOpts"></div>
+            </div>
+          </div>
+          <input type="text" id="fName" placeholder="Or type new student name…" style="margin-top:6px;display:none"/>
+          <span class="err" id="errName">Name required</span>
+        </div>
+      </div>
+      <div class="fg">
+        <div class="field"><label>Applications Sent</label>
+          <input type="number" id="fApplied" placeholder="0" min="0"/>
+          <span class="hint">Auto-counts from list below</span></div>
+        <div class="field"><label>GD Shortlists</label>
+          <input type="number" id="fGD" placeholder="0" min="0"/>
+          <span class="hint">Auto-counts from list below</span></div>
+      </div>
+      <div class="fg full" style="margin-top:8px">
+        <div class="field"><label>Interview Shortlists</label>
+          <input type="number" id="fInt" placeholder="0" min="0"/>
+          <span class="err" id="errInt">Cannot exceed GD rounds</span></div>
+      </div>
+      <div class="fg full" style="margin-top:12px">
+        <div class="field"><label>Companies Applied To</label>
+          <div class="tw" id="tw-app" onclick="focusTi('ti-app')">
+            <input class="ti" id="ti-app" placeholder="Type to add…" oninput="onTI('app')" onfocus="onTI('app')" onkeydown="onTK(event,'app')"/>
+            <div class="tdd" id="tdd-app"></div>
+          </div></div>
+      </div>
+      <div class="fg" style="margin-top:10px">
+        <div class="field"><label>GD Shortlisted At</label>
+          <div class="tw" id="tw-gd" onclick="focusTi('ti-gd')">
+            <input class="ti" id="ti-gd" placeholder="Type to add…" oninput="onTI('gd')" onfocus="onTI('gd')" onkeydown="onTK(event,'gd')"/>
+            <div class="tdd" id="tdd-gd"></div>
+          </div></div>
+        <div class="field"><label>Interviewed At</label>
+          <div class="tw" id="tw-int" onclick="focusTi('ti-int')">
+            <input class="ti" id="ti-int" placeholder="Type to add…" oninput="onTI('int')" onfocus="onTI('int')" onkeydown="onTK(event,'int')"/>
+            <div class="tdd" id="tdd-int"></div>
+          </div></div>
+      </div>
+    </div>
+    <div class="mftr">
+      <span class="ss" id="saveStatus"></span>
+      <div style="display:flex;gap:8px">
+        <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+        <button class="btn-save" onclick="saveStudent()">💾 Save & Sync</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EXCEL UPLOAD MODAL -->
+<div class="mov" id="xlMov" onclick="xlMovClick(event)">
+  <div class="modal" style="width:500px">
+    <div class="mhdr">
+      <div><h2>📂 Upload Excel File</h2><p>Update dashboard data from your spreadsheet</p></div>
+      <button class="mcls" onclick="closeXLModal()">✕</button>
+    </div>
+    <div class="mbody">
+      <div class="xl-drop" id="xlDrop" onclick="document.getElementById('xlFile').click()"
+        ondragover="xlDrag(event)" ondragleave="xlDragEnd(event)" ondrop="xlDrop(event)">
+        <div class="big">📊</div>
+        <p>Drop your <span>.xlsx</span> file here or <span>click to browse</span></p>
+        <p style="font-size:11px;margin-top:6px;">Expected columns: NAME, companies applied for, shortlisted for GD, shortlisted for interview</p>
+      </div>
+      <input type="file" id="xlFile" accept=".xlsx,.xls,.csv" onchange="xlFileChange(event)"/>
+      <div class="xl-preview" id="xlPreview"></div>
+      <div style="margin-top:14px;font-size:11.5px;color:var(--muted);">
+        <b style="color:var(--text)">Format tips:</b> Column 1 = Student Name, Col 2 = Companies applied (newline-separated),
+        Col 3 = GD shortlisted, Col 4 = Interviewed. Alternating data/total rows supported.
+        <br/><br/>
+        <b style="color:var(--yellow)">⚠ This will merge new data with existing.</b> Existing students will be updated.
+      </div>
+    </div>
+    <div class="mftr">
+      <span class="ss" id="xlStatus"></span>
+      <div style="display:flex;gap:8px">
+        <button class="btn-cancel" onclick="closeXLModal()">Cancel</button>
+        <button class="btn-save" id="xlSaveBtn" onclick="applyXLData()" style="display:none">✅ Apply & Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set as firebaseSet, onValue }
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+// Make sure to add your actual Firebase credentials here!
+const firebaseConfig = {
+  apiKey: "YOUR_KEY",
+  authDomain: "YOUR_DOMAIN",
+  databaseURL: "https://dashboard-8b3ea-default-rtdb.asia-southeast1.firebasedatabase.app/",
+  projectId: "YOUR_PROJECT_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// ══════════════════════════════════════════════════════════════════
+// DATA & STATE
+// ══════════════════════════════════════════════════════════════════
+const DEFAULT = [
+  // Keeping your default dummy data array...
+  {name:"Nidhi Milind Patil",applied:11,gd:1,interview:1,applied_list:["Western Carriers","TMIL","NYK Group","CCI Logistics","Freight System India Pvt Ltd","Kuehne Nagel","AP Moller - Maersk","AAJ Supply Chain","All Cargo","Gateway Distriparks","Swenlog"],gd_list:["All Cargo"],int_list:["All Cargo"]},
+  {name:"Agrodip Bhattacharya",applied:9,gd:0,interview:0,applied_list:["DOW Chemicals","AVG Logistics","Transystem","CCI Logistics","Freight System India Pvt Ltd","TAK","All Cargo","GEP Worldwide","Gateway Distriparks"],gd_list:[],int_list:[]}
+  // (Note: To save space in this response, I just included two records, keep your full DEFAULT array here)
+];
+
+let students = JSON.parse(JSON.stringify(DEFAULT));
+let cardLabels = {total:'Total Students',apps:'Applications',gd:'GD Rounds',int:'Interviews',zero:'Zero Interviews',conv:'GD→Interview'};
+let activeDrawer=null, activeStu='', activeCo='', cardFilter=null, editingIdx=null;
+let tagState={app:[],gd:[],int:[]}, selStuIdx=null;
+let expandedRows=new Set(), charts={}, xlParsed=null;
+
+// ── SYNC & STORAGE HELPERS (RESTORED) ─────────────────────────
+function setSync(isOk, msg) {
+  const dot = document.getElementById('syncDot');
+  const status = document.getElementById('syncStatus');
+  if (dot) dot.className = isOk ? 'sync-dot' : 'sync-dot off';
+  if (status) status.textContent = msg;
+}
+
+function setSyncTime() {
+  const st = document.getElementById('syncTime');
+  if (st) {
+    const now = new Date();
+    st.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+}
+
+// Wrapping Firebase save so the rest of your app can still "await saveStorage()"
+async function saveStorage() {
+  await saveToFirebase();
+}
+
+// ── FIREBASE INTEGRATION ──────────────────────────────────────
+function listenToFirebase() {
+  onValue(ref(db, "students"), (snapshot) => {
+    const data = snapshot.val();
+    const rawStudents = data || [];
+    
+    // FIREBASE FIX: Ensure every student object always has array properties, 
+    // even if Firebase stripped them out.
+    students = rawStudents.map(s => ({
+      ...s,
+      applied_list: s.applied_list || [],
+      gd_list: s.gd_list || [],
+      int_list: s.int_list || []
+    }));
+
+    render();
+    setSync(true, "Live sync (Firebase)");
+    setSyncTime();
+  });
+}
+function saveToFirebase() {
+  // Use firebaseSet here instead of set
+  return firebaseSet(ref(db, "students"), students)
+    .then(() => {
+      setSync(true, "Saved to cloud");
+      setSyncTime();
+    })
+    .catch((err) => {
+      console.error(err);
+      setSync(false, "Save failed");
+    });
+}
+// ── ALL UNIQUE COMPANIES ──────────────────────────────────────
+function allCos(){
+  const s=new Set();
+  students.forEach(st => {
+    // Fallback to empty arrays safely
+    const apps = st.applied_list || [];
+    const gds = st.gd_list || [];
+    const ints = st.int_list || [];
+    
+    [...apps, ...gds, ...ints].forEach(c => {
+      if(c && c.trim()) s.add(c.trim());
+    });
+  });
+  return [...s].sort();
+}
+
+// ── HELPERS ──────────────────────────────────────────────────
+const pct=(n,d)=>d>0?(n/d*100).toFixed(1)+'%':'—';
+const S=a=>a.reduce((x,y)=>x+y,0);
+const E=s=>String(s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+const uniq=arr=>[...new Set(arr.filter(Boolean))];
+
+function filtered(){
+  const q=document.getElementById('stuSearch').value.toLowerCase();
+  const co=activeCo.toLowerCase();
+  const minA=parseInt(document.getElementById('fMin').value)||0;
+  const stage=document.getElementById('fStage').value;
+  let list=students;
+  if(cardFilter==='zero') list=list.filter(s=>s.interview===0);
+  else if(cardFilter==='gd') list=list.filter(s=>s.gd>0);
+  else if(cardFilter==='int') list=list.filter(s=>s.interview>0);
+  if(activeStu) list=list.filter(s=>s.name.toLowerCase()===activeStu.toLowerCase());
+  else if(q) list=list.filter(s=>s.name.toLowerCase().includes(q));
+  if(minA) list=list.filter(s=>s.applied>=minA);
+  if(stage==='interview') list=list.filter(s=>s.interview>0);
+  if(stage==='no_interview') list=list.filter(s=>s.interview===0);
+  if(stage==='gd_only') list=list.filter(s=>s.gd>0&&s.interview===0);
+  if(co) list=list.filter(s=>[...s.applied_list,...s.gd_list,...s.int_list].some(c=>c.toLowerCase().includes(co)));
+  return list;
+}
+
+// ── RENDER ────────────────────────────────────────────────────
+function render(){
+  const fs=filtered();
+  const tA=S(fs.map(s=>s.applied)),tG=S(fs.map(s=>s.gd)),tI=S(fs.map(s=>s.interview));
+  const z=fs.filter(s=>s.interview===0).length;
+  set('kStu',fs.length);set('kApp',tA);set('kGD',tG);set('kInt',tI);set('kZero',z);
+  set('kConv',tG>0?Math.round(tI/tG*100)+'%':'—');
+  set('kGDpct',tA>0?pct(tG,tA)+' rate':'—');
+  set('kIntPct',tA>0?pct(tI,tA)+' rate':'—');
+  set('showCount',fs.length);set('totalCount',students.length);
+  buildTable(fs);buildFunnel(fs);buildCoPanelEl();
+  if(activeDrawer)renderDrawer();
+  renderResultCard();
+  const tf=document.getElementById('tableFilter');
+  tf.style.display=cardFilter?'inline':'none';
+}
+function set(id,v){const el=document.getElementById(id);if(el)el.textContent=v;}
+
+// ── TABLE ─────────────────────────────────────────────────────
+function buildTable(fs){
+  const tbody=document.getElementById('tbody');
+  document.getElementById('tblCount').textContent=`${fs.length} student${fs.length!==1?'s':''}`;
+  tbody.innerHTML='';
+  fs.forEach((s,i)=>{
+    const ri=students.indexOf(s);
+    const ir=s.applied>0?s.interview/s.applied:0;
+    const pill=ir>=0.25?'<span class="pill ph2">High</span>':ir>=0.1?'<span class="pill pm">Med</span>':'<span class="pill pl">Low</span>';
+    const bc=ir>=0.25?'var(--green)':ir>=0.1?'var(--orange)':'var(--red)';
+    const isExp=expandedRows.has(ri);
+    const tr=document.createElement('tr');tr.id=`tr-${ri}`;
+    tr.innerHTML=`
+      <td><div class="td-inner" style="color:var(--muted)">${i+1}</div></td>
+      <td><div class="td-inner">
+        <button class="stu-name-btn" onclick="toggleExpand(${ri})">
+          ${E(s.name)}<span class="expand-arrow${isExp?' open':''}" id="arr-${ri}">▶</span>
+        </button>
+      </div></td>
+      <td><div class="td-inner"><span class="nb bl editable" onclick="inlineEdit(event,${ri},'applied')">${s.applied}</span></div></td>
+      <td><div class="td-inner"><span class="nb or editable" onclick="inlineEdit(event,${ri},'gd')">${s.gd}</span></div></td>
+      <td><div class="td-inner"><span class="nb gr editable" onclick="inlineEdit(event,${ri},'interview')">${s.interview}</span></div></td>
+      <td><div class="td-inner">${pct(s.gd,s.applied)}</div></td>
+      <td><div class="td-inner">${pct(s.interview,s.applied)}</div></td>
+      <td><div class="td-inner">${pct(s.interview,s.gd)}</div></td>
+      <td><div class="td-inner"><div class="pw">
+        <div class="pb"><div class="pf" style="width:${Math.min(ir*4,1)*100}%;background:${bc}"></div></div>
+        ${pill}
+      </div></div></td>
+      <td><div class="td-inner"><div class="abts">
+        <button class="eb" onclick="openEdit(${ri})">✏</button>
+        <button class="db" onclick="delStu(${ri})">✕</button>
+      </div></div></td>`;
+    tbody.appendChild(tr);
+    if(isExp){
+      const etr=document.createElement('tr');etr.className='exp-row';etr.id=`exp-${ri}`;
+      etr.innerHTML=`<td colspan="10"><div class="expand-panel">
+        <div class="exp-col">
+          <div class="exp-col-title c-app">📋 Applied To (${s.applied_list.length})</div>
+          <div class="exp-chips">${s.applied_list.length?s.applied_list.map(c=>`<span class="exp-chip app">${E(c)}</span>`).join(''):'<span class="exp-empty">No data</span>'}</div>
+        </div>
+        <div class="exp-col">
+          <div class="exp-col-title c-gd">📝 GD Shortlisted At (${s.gd_list.length})</div>
+          <div class="exp-chips">${s.gd_list.length?s.gd_list.map(c=>`<span class="exp-chip gd">${E(c)}</span>`).join(''):'<span class="exp-empty">No shortlists</span>'}</div>
+        </div>
+        <div class="exp-col">
+          <div class="exp-col-title c-int">🎯 Interviewed At (${s.int_list.length})</div>
+          <div class="exp-chips">${s.int_list.length?s.int_list.map(c=>`<span class="exp-chip iv">${E(c)}</span>`).join(''):'<span class="exp-empty">No interviews</span>'}</div>
+        </div>
+      </div></td>`;
+      tbody.appendChild(etr);
+    }
+  });
+}
+
+function toggleExpand(ri){
+  if(expandedRows.has(ri))expandedRows.delete(ri);else expandedRows.add(ri);
+  render();
+}
+
+// Inline editing
+function inlineEdit(e,ri,field){
+  e.stopPropagation();
+  const span=e.target;
+  const cur=students[ri][field];
+  const inp=document.createElement('input');
+  inp.className='inline-inp';inp.type='number';inp.value=cur;inp.min=0;
+  span.replaceWith(inp);inp.focus();inp.select();
+  const done=async()=>{
+    const v=parseInt(inp.value);
+    if(!isNaN(v)&&v>=0){students[ri][field]=v;await saveStorage();}
+    render();
+  };
+  inp.onblur=done;
+  inp.onkeydown=e2=>{if(e2.key==='Enter')done();if(e2.key==='Escape'){render();}};
+}
+
+// ── STUDENT PROFILE CARD ──────────────────────────────────────
+function renderResultCard(){
+  const area=document.getElementById('resultArea');
+  if(activeStu){
+    const s=students.find(st=>st.name.toLowerCase()===activeStu.toLowerCase());
+    if(!s){area.className='result-area';return;}
+    area.className='result-area show';
+    area.innerHTML=`<div class="profile-card">
+      <div class="pc-hdr">
+        <div>
+          <div class="pc-name">👤 ${E(s.name)}</div>
+          <div class="pc-meta">📋 ${s.applied} applications · 📝 ${s.gd} GD rounds · 🎯 ${s.interview} interviews · Conv: ${pct(s.interview,s.gd)}</div>
+        </div>
+        <button class="pc-close" onclick="clearStu()">✕</button>
+      </div>
+      <div class="pc-body">
+        <div class="pc-col">
+          <div class="pc-col-hdr">
+            <div class="pc-col-title c-app">📋 Companies Applied</div>
+            <div class="pc-count c-app">${s.applied_list.length}</div>
+          </div>
+          <ul class="pc-list">${s.applied_list.length?s.applied_list.map(c=>`<li><span class="co-dot" style="background:var(--accent)"></span>${E(c)}</li>`).join(''):'<li class="empty-list">None recorded</li>'}</ul>
+        </div>
+        <div class="pc-col">
+          <div class="pc-col-hdr">
+            <div class="pc-col-title c-gd">📝 GD Shortlisted</div>
+            <div class="pc-count c-gd">${s.gd_list.length}</div>
+          </div>
+          <ul class="pc-list">${s.gd_list.length?s.gd_list.map(c=>`<li><span class="co-dot" style="background:var(--orange)"></span>${E(c)}</li>`).join(''):'<li class="empty-list">No shortlists</li>'}</ul>
+        </div>
+        <div class="pc-col">
+          <div class="pc-col-hdr">
+            <div class="pc-col-title c-int">🎯 Interviewed At</div>
+            <div class="pc-count c-int">${s.int_list.length}</div>
+          </div>
+          <ul class="pc-list">${s.int_list.length?s.int_list.map(c=>`<li><span class="co-dot" style="background:var(--green)"></span>${E(c)}</li>`).join(''):'<li class="empty-list">No interviews</li>'}</ul>
+        </div>
+      </div>
+    </div>`;
+    return;
+  }
+  if(activeCo){
+    const co=activeCo;
+    const applied=students.filter(s=>s.applied_list.some(c=>c.toLowerCase()===co.toLowerCase()));
+    const gd=students.filter(s=>s.gd_list.some(c=>c.toLowerCase()===co.toLowerCase()));
+    const iv=students.filter(s=>s.int_list.some(c=>c.toLowerCase()===co.toLowerCase()));
+    area.className='result-area show';
+    const chipGroup=(arr,cls,label)=>arr.length?arr.map(s=>`
+      <div class="co-stu-chip" onclick="selectStu(${students.indexOf(s)})">
+        <div class="csn">${E(s.name)}</div>
+        <div class="csm">${s.applied} apps · ${s.gd} GD · ${s.interview} interviews</div>
+      </div>`).join(''):`<div style="color:var(--muted);font-size:11.5px;font-style:italic">None</div>`;
+    area.innerHTML=`<div class="profile-card">
+      <div class="pc-hdr">
+        <div>
+          <div class="pc-name">🏢 ${E(co)}</div>
+          <div class="pc-meta">${applied.length} applied · ${gd.length} GD shortlisted · ${iv.length} interviewed · Click a student to see their full profile</div>
+        </div>
+        <button class="pc-close" onclick="clearCo()">✕</button>
+      </div>
+      <div class="pc-body">
+        <div class="pc-col">
+          <div class="pc-col-hdr"><div class="pc-col-title c-app">📋 Applied (${applied.length})</div></div>
+          <div class="co-student-list">${chipGroup(applied,'app','Applied')}</div>
+        </div>
+        <div class="pc-col">
+          <div class="pc-col-hdr"><div class="pc-col-title c-gd">📝 GD Shortlisted (${gd.length})</div></div>
+          <div class="co-student-list">${chipGroup(gd,'gd','GD')}</div>
+        </div>
+        <div class="pc-col">
+          <div class="pc-col-hdr"><div class="pc-col-title c-int">🎯 Interviewed (${iv.length})</div></div>
+          <div class="co-student-list">${chipGroup(iv,'iv','Interview')}</div>
+        </div>
+      </div>
+    </div>`;
+    return;
+  }
+  area.className='result-area';
+}
+
+// ── COMPANIES PANEL ───────────────────────────────────────────
+function buildCoPanelEl(){
+  const cos=allCos();
+  document.getElementById('coTotal').textContent=cos.length;
+  document.getElementById('coGrid').innerHTML=cos.map(c=>
+    // Added .replace(/'/g, "\\'") to prevent apostrophes from breaking the onclick handler
+    `<div class="co-chip" onclick="selectCoFromPanel('${E(c).replace(/'/g, "\\'")}')" title="Click to see who applied">${E(c)}</div>`
+  ).join('');
+}
+
+function selectCoFromPanel(name){
+  activeCo=name;activeStu='';
+  document.getElementById('coSearch').value='';
+  document.getElementById('coTag').style.display='flex';
+  document.getElementById('coTag').innerHTML=`<div class="active-tag tag-co">🏢 ${E(name)}<button onclick="clearCo()">✕</button></div>`;
+  document.getElementById('stuTag').style.display='none';
+  render();
+  document.getElementById('resultArea').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+// ── FUNNEL CHART ──────────────────────────────────────────────
+function buildFunnel(fs){
+  if(charts.f)charts.f.destroy();
+  charts.f=new Chart(document.getElementById('funnelChart'),{
+    type:'bar',
+    data:{labels:fs.map(s=>s.name.split(' ').slice(0,2).join(' ')),datasets:[
+      {label:'Applied',data:fs.map(s=>s.applied),backgroundColor:'rgba(59,130,246,.7)',borderRadius:3},
+      {label:'GD',data:fs.map(s=>s.gd),backgroundColor:'rgba(249,115,22,.75)',borderRadius:3},
+      {label:'Interviews',data:fs.map(s=>s.interview),backgroundColor:'rgba(34,197,94,.85)',borderRadius:3},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{color:'#94a3b8',boxWidth:10}},tooltip:{mode:'index',intersect:false}},
+      scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#64748b',maxRotation:35,font:{size:9}}},
+              y:{grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#64748b'},beginAtZero:true}}}
+  });
+}
+
+// ── CARD DRAWER ───────────────────────────────────────────────
+const DCFG={
+  total:{title:()=>cardLabels.total,filter:s=>true,desc:'All students',sort:null},
+  apps:{title:()=>cardLabels.apps,filter:s=>true,desc:'By applications sent',sort:(a,b)=>b.applied-a.applied},
+  gd:{title:()=>cardLabels.gd,filter:s=>s.gd>0,desc:'Reached GD stage',sort:(a,b)=>b.gd-a.gd},
+  int:{title:()=>cardLabels.int,filter:s=>s.interview>0,desc:'Got interview calls',sort:(a,b)=>b.interview-a.interview},
+  zero:{title:()=>cardLabels.zero,filter:s=>s.interview===0,desc:'No interviews — need attention'},
+  conv:{title:()=>cardLabels.conv,filter:s=>s.gd>0,desc:'By GD→Interview conversion',sort:(a,b)=>(b.interview/b.gd)-(a.interview/a.gd)}
+};
+
+function openDrawer(type){
+  if(activeDrawer===type){closeDrawer();clearCardFilter();return;}
+  document.querySelectorAll('.kpi').forEach(k=>k.classList.remove('active'));
+  document.getElementById(`kpi-${type}`).classList.add('active');
+  activeDrawer=type;cardFilter=type;
+  document.getElementById('dSearch').value='';
+  document.getElementById('dTitle').textContent=DCFG[type].title();
+  document.getElementById('dov').classList.add('open');
+  document.getElementById('drawer').classList.add('open');
+  renderDrawer();render();
+}
+function closeDrawer(){
+  activeDrawer=null;
+  document.querySelectorAll('.kpi').forEach(k=>k.classList.remove('active'));
+  document.getElementById('dov').classList.remove('open');
+  document.getElementById('drawer').classList.remove('open');
+}
+function clearCardFilter(){cardFilter=null;closeDrawer();render();}
+
+function renderDrawer(){
+  if(!activeDrawer)return;
+  const cfg=DCFG[activeDrawer];
+  const q=document.getElementById('dSearch').value.toLowerCase();
+  let list=students.filter(cfg.filter);
+  if(q)list=list.filter(s=>s.name.toLowerCase().includes(q));
+  if(cfg.sort)list=[...list].sort(cfg.sort);
+  document.getElementById('dCount').textContent=`${list.length} student${list.length!==1?'s':''} · ${cfg.desc}`;
+  if(!list.length){document.getElementById('dbody').innerHTML=`<div class="dempty"><div class="big">😶</div><p>No students match.</p></div>`;return;}
+  const coList=type=>activeDrawer==='gd'?type.gd_list:activeDrawer==='int'||activeDrawer==='conv'?type.int_list:type.applied_list;
+  document.getElementById('dbody').innerHTML=list.map(s=>{
+    const ri=students.indexOf(s);
+    const conv=s.gd>0?s.interview/s.gd:0;
+    const cl=coList(s);
+    return`<div class="ds">
+      <div class="ds-name">${E(s.name)}</div>
+      <div class="ds-pills">
+        <span class="dp dp-a">📋 ${s.applied}</span>
+        <span class="dp dp-g">📝 ${s.gd}</span>
+        <span class="dp dp-i">🎯 ${s.interview}</span>
+        ${activeDrawer==='zero'?'<span class="dp dp-z">⚠ No interview</span>':''}
+        ${activeDrawer==='conv'&&s.gd>0?`<span class="dp dp-i">⚡${Math.round(conv*100)}%</span>`:''}
+      </div>
+      ${cl.length?`<div style="font-size:10.5px;color:var(--muted)">${cl.slice(0,5).map(c=>E(c)).join(' · ')}${cl.length>5?` +${cl.length-5} more`:''}</div>`:''}
+      <div class="ds-act"><button class="ds-eb" onclick="openEdit(${ri})">✏ Edit</button>
+      <button class="ds-eb" style="margin-left:4px;color:var(--teal);background:rgba(6,182,212,.1)" onclick="selectStu(${ri});closeDrawer()">👤 Profile</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── CARD LABEL EDITING ────────────────────────────────────────
+function editLbl(e,id){
+  e.stopPropagation();
+  const lbl=document.getElementById(`lbl-${id}`),inp=document.getElementById(`inp-${id}`);
+  inp.value=cardLabels[id];lbl.style.display='none';inp.style.display='block';inp.focus();inp.select();
+}
+function saveLbl(id){
+  const inp=document.getElementById(`inp-${id}`),v=inp.value.trim()||cardLabels[id];
+  cardLabels[id]=v;
+  const lbl=document.getElementById(`lbl-${id}`);
+  lbl.innerHTML=`${E(v)} <button class="elbl" onclick="editLbl(event,'${id}')">✎</button>`;
+  inp.style.display='none';lbl.style.display='flex';
+  if(activeDrawer===id)document.getElementById('dTitle').textContent=v;
+  saveStorage();toast('✏ Label saved');
+}
+function lblKey(e,id){if(e.key==='Enter'){e.preventDefault();saveLbl(id);}if(e.key==='Escape'){document.getElementById(`inp-${id}`).style.display='none';document.getElementById(`lbl-${id}`).style.display='flex';}}
+
+// ── STUDENT SEARCH AUTOCOMPLETE ───────────────────────────────
+let stuDdIdx=-1;
+function onStuInput(){
+  const v=document.getElementById('stuSearch').value.trim();
+  const dd=document.getElementById('stuDd');
+  if(!v){dd.classList.remove('open');clearStu();return;}
+  const matches=students.filter(s=>s.name.toLowerCase().includes(v.toLowerCase())).slice(0,10);
+  if(!matches.length){dd.classList.remove('open');return;}
+  dd.innerHTML=matches.map((s,i)=>`<div class="s-opt" onclick="selectStu(${students.indexOf(s)})"><div>${E(s.name)}</div><div class="s-meta">${s.applied} apps · ${s.gd} GD · ${s.interview} int.</div></div>`).join('');
+  dd.classList.add('open');stuDdIdx=-1;
+}
+function onStuKey(e){
+  const dd=document.getElementById('stuDd'),opts=dd.querySelectorAll('.s-opt');
+  if(e.key==='ArrowDown'){e.preventDefault();stuDdIdx=Math.min(stuDdIdx+1,opts.length-1);opts.forEach((o,i)=>o.classList.toggle('focused',i===stuDdIdx));}
+  else if(e.key==='ArrowUp'){e.preventDefault();stuDdIdx=Math.max(stuDdIdx-1,0);opts.forEach((o,i)=>o.classList.toggle('focused',i===stuDdIdx));}
+  else if(e.key==='Enter'&&stuDdIdx>=0){e.preventDefault();opts[stuDdIdx].click();}
+  else if(e.key==='Escape'){dd.classList.remove('open');}
+}
+function selectStu(ri){
+  const s=students[ri];activeStu=s.name;activeCo='';
+  document.getElementById('stuSearch').value='';document.getElementById('stuDd').classList.remove('open');
+  document.getElementById('stuTag').style.display='flex';
+  document.getElementById('stuTag').innerHTML=`<div class="active-tag tag-stu">👤 ${E(s.name)}<button onclick="clearStu()">✕</button></div>`;
+  document.getElementById('coTag').style.display='none';document.getElementById('coSearch').value='';
+  render();
+  document.getElementById('resultArea').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function clearStu(){activeStu='';document.getElementById('stuTag').style.display='none';document.getElementById('stuSearch').value='';render();}
+document.addEventListener('click',e=>{if(!document.getElementById('stuWrap').contains(e.target))document.getElementById('stuDd').classList.remove('open');});
+
+// ── COMPANY SEARCH AUTOCOMPLETE ───────────────────────────────
+let coDdIdx=-1;
+function onCoInput(){
+  const v=document.getElementById('coSearch').value.trim();
+  const dd=document.getElementById('coDd');
+  if(!v){dd.classList.remove('open');return;}
+  const matches=allCos().filter(c=>c.toLowerCase().includes(v.toLowerCase())).slice(0,12);
+  if(!matches.length){dd.classList.remove('open');return;}
+  dd.innerHTML=matches.map((c,i)=>`<div class="c-opt" onclick="selCoSearch('${E(c)}')">${c.replace(new RegExp(`(${v.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'),'<mark>$1</mark>')}</div>`).join('');
+  dd.classList.add('open');coDdIdx=-1;
+}
+function onCoKey(e){
+  const dd=document.getElementById('coDd'),opts=dd.querySelectorAll('.c-opt');
+  if(e.key==='ArrowDown'){e.preventDefault();coDdIdx=Math.min(coDdIdx+1,opts.length-1);opts.forEach((o,i)=>o.classList.toggle('focused',i===coDdIdx));}
+  else if(e.key==='ArrowUp'){e.preventDefault();coDdIdx=Math.max(coDdIdx-1,0);opts.forEach((o,i)=>o.classList.toggle('focused',i===coDdIdx));}
+  else if(e.key==='Enter'&&coDdIdx>=0){e.preventDefault();opts[coDdIdx].click();}
+  else if(e.key==='Escape'){dd.classList.remove('open');}
+}
+function selCoSearch(name){
+  activeCo=name;activeStu='';
+  document.getElementById('coSearch').value='';document.getElementById('coDd').classList.remove('open');
+  document.getElementById('coTag').style.display='flex';
+  document.getElementById('coTag').innerHTML=`<div class="active-tag tag-co">🏢 ${E(name)}<button onclick="clearCo()">✕</button></div>`;
+  document.getElementById('stuTag').style.display='none';
+  render();
+  document.getElementById('resultArea').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function clearCo(){activeCo='';document.getElementById('coTag').style.display='none';document.getElementById('coSearch').value='';render();}
+document.addEventListener('click',e=>{if(!document.getElementById('coWrap').contains(e.target))document.getElementById('coDd').classList.remove('open');});
+
+// ── STUDENT MODAL DD ──────────────────────────────────────────
+function toggleStuDd(){
+  const dd=document.getElementById('stuModalDd'),btn=document.getElementById('stuModalBtn');
+  if(dd.classList.contains('open')){dd.classList.remove('open');btn.classList.remove('open');}
+  else{buildStuOpts();dd.classList.add('open');btn.classList.add('open');document.getElementById('stuModalSrch').value='';document.getElementById('stuModalSrch').focus();}
+}
+function buildStuOpts(f=''){
+  const fl=f.toLowerCase();
+  const list=students.filter(s=>!fl||s.name.toLowerCase().includes(fl));
+  document.getElementById('stuModalOpts').innerHTML=
+    `<div class="sdd-opt sdd-new" onclick="selModalStu(-1)">➕ Add New Student</div>`
+    +list.map(s=>`<div class="sdd-opt" onclick="selModalStu(${students.indexOf(s)})"><div>${E(s.name)}</div><div class="sm">${s.applied} apps · ${s.gd} GD · ${s.interview} int.</div></div>`).join('');
+}
+function filterStuOpts(){buildStuOpts(document.getElementById('stuModalSrch').value);}
+function selModalStu(ri){
+  document.getElementById('stuModalDd').classList.remove('open');document.getElementById('stuModalBtn').classList.remove('open');
+  selStuIdx=ri;
+  if(ri===-1){
+    document.getElementById('stuModalTxt').textContent='➕ New Student';document.getElementById('stuModalTxt').style.color='var(--green)';
+    document.getElementById('fName').style.display='block';document.getElementById('fName').value='';document.getElementById('fName').focus();
+    document.getElementById('fApplied').value='';document.getElementById('fGD').value='';document.getElementById('fInt').value='';
+    tagState={app:[],gd:[],int:[]};clearTags();
+  }else{
+    const s=students[ri];
+    document.getElementById('stuModalTxt').textContent=s.name;document.getElementById('stuModalTxt').style.color='var(--text)';
+    document.getElementById('fName').style.display='none';
+    document.getElementById('fApplied').value=s.applied;document.getElementById('fGD').value=s.gd;document.getElementById('fInt').value=s.interview;
+    tagState={app:[...s.applied_list],gd:[...s.gd_list],int:[...s.int_list]};clearTags();['app','gd','int'].forEach(renderTags);
+  }
+}
+document.addEventListener('click',e=>{const s=document.querySelector('.stu-sel');if(s&&!s.contains(e.target)){document.getElementById('stuModalDd').classList.remove('open');document.getElementById('stuModalBtn').classList.remove('open');}});
+
+// ── TAG INPUT ─────────────────────────────────────────────────
+function clearTags(){['app','gd','int'].forEach(k=>{document.getElementById(`tw-${k}`).querySelectorAll('.tc').forEach(c=>c.remove());});}
+function focusTi(id){document.getElementById(id).focus();}
+let tIdx={app:-1,gd:-1,int:-1};
+
+function renderTags(key){
+  const wrap=document.getElementById(`tw-${key}`),inp=document.getElementById(`ti-${key}`);
+  wrap.querySelectorAll('.tc').forEach(c=>c.remove());
+  tagState[key].forEach((co,i)=>{
+    const chip=document.createElement('div');chip.className='tc';
+    chip.innerHTML=`${E(co)}<button onclick="rmTag('${key}',${i})">×</button>`;
+    wrap.insertBefore(chip,inp);
+  });
+  if(key==='app'&&tagState.app.length)document.getElementById('fApplied').value=tagState.app.length;
+  if(key==='gd'&&tagState.gd.length)document.getElementById('fGD').value=tagState.gd.length;
+  if(key==='int'&&tagState.int.length)document.getElementById('fInt').value=tagState.int.length;
+}
+function rmTag(key,i){tagState[key].splice(i,1);renderTags(key);}
+function getTagSrc(key){
+  if(key==='app')return uniq([...allCos(),...students.map(s=>s.applied_list).flat()]);
+  if(key==='gd')return tagState.app.length?tagState.app:allCos();
+  return tagState.gd.length?tagState.gd:(tagState.app.length?tagState.app:allCos());
+}
+function onTI(key){
+  const inp=document.getElementById(`ti-${key}`),dd=document.getElementById(`tdd-${key}`);
+  const v=inp.value.trim().toLowerCase();
+  const src=getTagSrc(key),used=tagState[key];
+  let m=src.filter(c=>!v||c.toLowerCase().includes(v));
+  const canNew=v&&!src.some(c=>c.toLowerCase()===v);
+  dd.innerHTML=(canNew?`<div class="to to-new" onclick="addTag('${key}','${v.replace(/'/g,"\\'")}')">＋ Add "${v}"</div>`:'')
+    +(m.length?m.slice(0,12).map(c=>`<div class="to ${used.includes(c)?'used':''}" onclick="addTag('${key}','${c.replace(/'/g,"\\'")}')">
+      ${v?c.replace(new RegExp(`(${v.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'),'<mark>$1</mark>'):E(c)}</div>`).join('')
+    :`<div class="to-empty">No matches</div>`);
+  dd.classList.add('open');tIdx[key]=-1;
+}
+function onTK(e,key){
+  const dd=document.getElementById(`tdd-${key}`),opts=dd.querySelectorAll('.to:not(.used)');
+  if(e.key==='ArrowDown'){e.preventDefault();tIdx[key]=Math.min(tIdx[key]+1,opts.length-1);opts.forEach((o,i)=>o.classList.toggle('focused',i===tIdx[key]));}
+  else if(e.key==='ArrowUp'){e.preventDefault();tIdx[key]=Math.max(tIdx[key]-1,0);opts.forEach((o,i)=>o.classList.toggle('focused',i===tIdx[key]));}
+  else if(e.key==='Enter'&&tIdx[key]>=0){e.preventDefault();opts[tIdx[key]].click();}
+  else if(e.key==='Backspace'&&!document.getElementById(`ti-${key}`).value&&tagState[key].length){tagState[key].pop();renderTags(key);}
+  else if(e.key==='Escape')dd.classList.remove('open');
+}
+function addTag(key,name){
+  if(!tagState[key].includes(name))tagState[key].push(name);
+  renderTags(key);document.getElementById(`ti-${key}`).value='';document.getElementById(`ti-${key}`).focus();
+  document.getElementById(`tdd-${key}`).classList.remove('open');
+}
+document.addEventListener('click',e=>{['app','gd','int'].forEach(k=>{const w=document.getElementById(`tw-${k}`);if(w&&!w.contains(e.target))document.getElementById(`tdd-${k}`).classList.remove('open');});});
+
+// ── MODAL ─────────────────────────────────────────────────────
+function openModal(){
+  editingIdx=null;selStuIdx=null;
+  document.getElementById('mTitle').textContent='Add / Update Student';
+  document.getElementById('mSub').textContent='Select existing student or add new';
+  document.getElementById('stuModalTxt').textContent='Select or add new…';document.getElementById('stuModalTxt').style.color='var(--muted)';
+  document.getElementById('fName').style.display='none';document.getElementById('fName').value='';
+  document.getElementById('fApplied').value='';document.getElementById('fGD').value='';document.getElementById('fInt').value='';
+  tagState={app:[],gd:[],int:[]};clearTags();
+  document.getElementById('errName').style.display='none';document.getElementById('errInt').style.display='none';
+  document.getElementById('saveStatus').textContent='';
+  buildStuOpts();document.getElementById('mov').classList.add('open');
+}
+function openEdit(ri){
+  editingIdx=ri;selStuIdx=ri;const s=students[ri];
+  document.getElementById('mTitle').textContent='Edit Student';document.getElementById('mSub').textContent=s.name;
+  document.getElementById('stuModalTxt').textContent=s.name;document.getElementById('stuModalTxt').style.color='var(--text)';
+  document.getElementById('fName').style.display='none';
+  document.getElementById('fApplied').value=s.applied;document.getElementById('fGD').value=s.gd;document.getElementById('fInt').value=s.interview;
+  tagState={app:[...s.applied_list],gd:[...s.gd_list],int:[...s.int_list]};clearTags();['app','gd','int'].forEach(renderTags);
+  document.getElementById('errName').style.display='none';document.getElementById('errInt').style.display='none';
+  document.getElementById('saveStatus').textContent='';
+  buildStuOpts();document.getElementById('mov').classList.add('open');
+}
+function closeModal(){document.getElementById('mov').classList.remove('open');}
+function movClick(e){if(e.target===document.getElementById('mov'))closeModal();}
+
+async function saveStudent(){
+  document.getElementById('errName').style.display='none';document.getElementById('errInt').style.display='none';
+  let name='';
+  if(selStuIdx===-1||selStuIdx===null){name=document.getElementById('fName').value.trim();}
+  else if(selStuIdx!==null){name=students[selStuIdx].name;}
+  if(!name){document.getElementById('errName').style.display='block';return;}
+  const applied=parseInt(document.getElementById('fApplied').value)||tagState.app.length;
+  const gd=parseInt(document.getElementById('fGD').value)||tagState.gd.length;
+  const intv=parseInt(document.getElementById('fInt').value)||tagState.int.length;
+  if(intv>gd&&gd>0){document.getElementById('errInt').style.display='block';return;}
+  const rec={name,applied,gd,interview:intv,applied_list:[...tagState.app],gd_list:[...tagState.gd],int_list:[...tagState.int]};
+  const ei=students.findIndex(s=>s.name.toLowerCase()===name.toLowerCase());
+  let msg='';
+  if(editingIdx!==null){students[editingIdx]=rec;msg='✅ Updated!';}
+  else if(ei>=0){students[ei]=rec;msg='✅ Student updated!';}
+  else{students.push(rec);msg='✅ Student added!';}
+  document.getElementById('saveStatus').textContent='Saving…';
+  await saveStorage();document.getElementById('saveStatus').textContent='Saved ✓';
+  closeModal();render();toast(msg);
+}
+
+function delStu(ri){
+  if(!confirm(`Remove "${students[ri].name}"?`))return;
+  students.splice(ri,1);expandedRows.delete(ri);saveStorage();render();toast('🗑 Removed');
+}
+
+// ── EXCEL UPLOAD ──────────────────────────────────────────────
+xlParsed=null;
+function openXLModal(){document.getElementById('xlMov').classList.add('open');document.getElementById('xlPreview').style.display='none';document.getElementById('xlSaveBtn').style.display='none';document.getElementById('xlStatus').textContent='';xlParsed=null;}
+function closeXLModal(){document.getElementById('xlMov').classList.remove('open');}
+function xlMovClick(e){if(e.target===document.getElementById('xlMov'))closeXLModal();}
+function xlDrag(e){e.preventDefault();document.getElementById('xlDrop').classList.add('drag');}
+function xlDragEnd(){document.getElementById('xlDrop').classList.remove('drag');}
+function xlDrop(e){e.preventDefault();xlDragEnd();const f=e.dataTransfer.files[0];if(f)processXL(f);}
+function xlFileChange(e){const f=e.target.files[0];if(f)processXL(f);}
+
+function processXL(file){
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const wb=XLSX.read(ev.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      xlParsed=parseXLRows(rows);
+      const preview=document.getElementById('xlPreview');
+      preview.style.display='block';
+      preview.innerHTML=`<b style="color:var(--green)">✅ Parsed ${xlParsed.length} students:</b><br/>`+xlParsed.slice(0,5).map(s=>`• ${s.name}: ${s.applied} apps, ${s.gd} GD, ${s.interview} interviews`).join('<br/>');
+      document.getElementById('xlSaveBtn').style.display='block';
+      document.getElementById('xlStatus').textContent=`Ready to apply ${xlParsed.length} student records`;
+    }catch(err){document.getElementById('xlPreview').style.display='block';document.getElementById('xlPreview').innerHTML=`<span style="color:var(--red)">❌ Error parsing file: ${err.message}</span>`;}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function parseXLRows(rows){
+  const result=[];
+  let i=0;
+  if(rows[0]&&typeof rows[0][0]==='string'&&rows[0][0].toLowerCase().includes('name'))i=1;
+  while(i<rows.length){
+    const row=rows[i];
+    const name=String(row[0]||'').trim();
+    if(!name||name.toLowerCase()==='total'){i++;continue;}
+    const appliedRaw=String(row[1]||'');
+    const gdRaw=String(row[2]||'');
+    const intRaw=String(row[3]||'');
+    let applied=0,gd=0,intv=0;
+    
+    if(i+1<rows.length&&String(rows[i+1][0]).toLowerCase().includes('total')){
+      applied=parseInt(rows[i+1][1])||0;gd=parseInt(rows[i+1][2])||0;intv=parseInt(rows[i+1][3])||0;i+=2;
+    }else{i++;}
+    
+    // THE FIX: This regex now splits by newlines, commas, semicolons, tabs (\t), 
+    // OR two or more consecutive spaces (\s{2,})
+    const splitRegex = /[\n,;\t]+|\s{2,}/;
+    
+    const appList=uniq(appliedRaw.split(splitRegex).map(s=>s.trim()).filter(Boolean));
+    const gdList=uniq(gdRaw.split(splitRegex).map(s=>s.trim()).filter(c=>c&&!['none','nil','—','0'].includes(c.toLowerCase())));
+    const intList=uniq(intRaw.split(splitRegex).map(s=>s.trim()).filter(c=>c&&!['none','nil','—','0'].includes(c.toLowerCase())));
+    
+    if(!applied)applied=appList.length;if(!gd)gd=gdList.length;if(!intv)intv=intList.length;
+    result.push({name,applied,gd,interview:intv,applied_list:appList,gd_list:gdList,int_list:intList});
+  }
+  return result;
+}
+
+async function applyXLData(){
+  if(!xlParsed||!xlParsed.length)return;
+  let added=0, updated=0, skipped=0;
+  
+  xlParsed.forEach(rec=>{
+    const ei = students.findIndex(s=>s.name.toLowerCase()===rec.name.toLowerCase());
+    
+    if(ei >= 0){
+      const existing = students[ei];
+      
+      // Check if it's an exact duplicate
+      const isExactDuplicate = 
+        existing.applied === rec.applied &&
+        existing.gd === rec.gd &&
+        existing.interview === rec.interview &&
+        JSON.stringify([...existing.applied_list].sort()) === JSON.stringify([...rec.applied_list].sort());
+      
+      if (isExactDuplicate) {
+        skipped++; // Drop/skip the duplicate
+      } else {
+        // Smart Merge: Combine existing lists with new lists uniquely
+        existing.applied_list = uniq([...existing.applied_list, ...rec.applied_list]);
+        existing.gd_list = uniq([...existing.gd_list, ...rec.gd_list]);
+        existing.int_list = uniq([...existing.int_list, ...rec.int_list]);
+        
+        // Update the counts based on the merged lists
+        existing.applied = existing.applied_list.length;
+        existing.gd = existing.gd_list.length;
+        existing.interview = existing.int_list.length;
+        updated++;
+      }
+    } else {
+      students.push(rec);
+      added++;
+    }
+  });
+  
+  await saveStorage();
+  render();
+  closeXLModal();
+  toast(`✅ Excel applied: ${added} added, ${updated} merged, ${skipped} duplicates dropped`);
+}
+
+async function clearAllStudents() {
+  if (!confirm("⚠ Are you sure you want to delete ALL student data? This will wipe your Firebase database and cannot be undone.")) return;
+  students = [];
+  expandedRows.clear();
+  await saveStorage();
+  render();
+  toast('🗑 All student data cleared');
+}
+// ── UTILS ─────────────────────────────────────────────────────
+function resetFilters(){
+  document.getElementById('stuSearch').value='';document.getElementById('fMin').value='0';document.getElementById('fStage').value='all';
+  clearStu();clearCo();clearCardFilter();
+}
+let toastT;
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.style.display='block';clearTimeout(toastT);toastT=setTimeout(()=>el.style.display='none',3000);}
+function exportCSV(){
+  const rows=[['Name','Applied','GD','Interviews','GD Rate','Int Rate','Conversion','Companies Applied']];
+  students.forEach(s=>rows.push([`"${s.name}"`,s.applied,s.gd,s.interview,pct(s.gd,s.applied),pct(s.interview,s.applied),pct(s.interview,s.gd),`"${s.applied_list.join('; ')}"`]));
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(rows.map(r=>r.join(',')).join('\n'));a.download='Placement_Export.csv';a.click();toast('📥 Exported');
+}
+
+// ── INIT ─────────────────────────────────────────────────────
+listenToFirebase();
+
+// ── EXPOSE TO WINDOW ──────────────────────────────────────────
+// Because type="module" limits scope, we must manually expose EVERY
+// function that is called from an inline HTML onclick/onchange/oninput event.
+Object.assign(window, {
+  openModal, closeModal, saveStudent, exportCSV, openXLModal, closeXLModal,
+  applyXLData, resetFilters, toggleExpand, openEdit, delStu, inlineEdit,
+  onStuInput, onStuKey, onCoInput, onCoKey, render, openDrawer, editLbl,
+  saveLbl, lblKey, clearStu, clearCo, selectStu, selectCoFromPanel,
+  clearCardFilter, closeDrawer, renderDrawer, movClick, toggleStuDd,
+  filterStuOpts, selModalStu, focusTi, onTI, onTK, xlMovClick, xlDrag,
+  xlDragEnd, xlDrop, xlFileChange, addTag, rmTag, selCoSearch, clearAllStudents
+});
+
+</script>
+</body>
+</html>
