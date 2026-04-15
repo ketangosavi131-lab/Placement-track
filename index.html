@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Placement Tracker</title>
+<title>CII Mumbai Placement Tracker</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -56,7 +56,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .kpi::before{content:'';position:absolute;right:-14px;top:-14px;width:65px;height:65px;border-radius:50%;opacity:.07;background:currentColor;}
 .kpi:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.4);}
 .kpi.active{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.4);}
-.kpi.hidden-card{display:none !important;}
+.kpi.hidden-card{opacity:.35;filter:blur(0px);}
+.kpi.hidden-card .kpi-val{filter:blur(3px);}
 .kpi.c-blue{border-color:var(--accent);color:var(--accent);}.kpi.c-blue.active{outline:2px solid var(--accent);}
 .kpi.c-teal{border-color:var(--teal);color:var(--teal);}.kpi.c-teal.active{outline:2px solid var(--teal);}
 .kpi.c-orange{border-color:var(--orange);color:var(--orange);}.kpi.c-orange.active{outline:2px solid var(--orange);}
@@ -71,14 +72,6 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .elbl,.hide-btn{background:none;border:none;cursor:pointer;color:var(--border2);font-size:10px;padding:1px 3px;border-radius:3px;opacity:0;transition:.15s;}
 .kpi:hover .elbl,.kpi:hover .hide-btn{opacity:1;}
 .elbl:hover{color:var(--accent);}.hide-btn:hover{color:var(--yellow);}
-
-/* RESTORE BAR — shown when any card is hidden */
-.restore-bar{display:none;align-items:center;flex-wrap:wrap;gap:6px;padding:7px 24px 2px;background:rgba(234,179,8,.04);border-bottom:1px solid rgba(234,179,8,.12);}
-.restore-bar.visible{display:flex;}
-.restore-bar-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;}
-.restore-chip{display:flex;align-items:center;gap:4px;background:rgba(234,179,8,.1);border:1px solid rgba(234,179,8,.25);border-radius:5px;padding:2px 8px;font-size:10.5px;font-weight:600;color:var(--yellow);cursor:default;}
-.restore-chip button{background:none;border:none;cursor:pointer;color:var(--yellow);font-size:11px;padding:0 0 0 3px;opacity:.7;transition:.15s;}
-.restore-chip button:hover{opacity:1;color:var(--green);}
 .kpi-val{font-size:24px;font-weight:900;line-height:1;}.kpi-sub{font-size:9px;color:var(--muted);margin-top:2px;}.kpi-hint{font-size:8.5px;color:var(--border2);margin-top:3px;}
 /* PROFILE */
 .result-area{padding:12px 24px 0;display:none;}.result-area.show{display:block;}
@@ -341,12 +334,12 @@ tbody tr:hover td .tdi{background:rgba(59,130,246,.04);}
 <body>
 <!-- HEADER -->
 <div class="hdr">
-  <div><h1>📋 Placement <span>Tracker</span></h1>
+  <div><h1>📋 CII Mumbai <span>Placement Tracker</span></h1>
     <div class="hdr-sub"><span class="sync-dot" id="syncDot"></span><span id="syncStatus">Connecting…</span> · <span id="syncTime">—</span></div></div>
   <div class="hdr-btns">
     <button class="btn btn-y" onclick="openCoModal()">🏢 Company Entry</button>
     <button class="btn btn-o" onclick="openXLModal()">📂 Excel</button>
-    <button class="btn btn-o" onclick="exportCSV()">⬇ CSV</button>
+    <button class="btn btn-o" onclick="exportXLSX()" style="background:rgba(34,197,94,.1);color:var(--green);border:1.5px solid rgba(34,197,94,.3);">📊 Export Excel</button>
     <button class="btn btn-r" onclick="clearAllStudents()">🗑 Clear All</button>
     <button class="btn btn-p" onclick="openModal()">＋ Add / Update</button>
   </div>
@@ -361,15 +354,13 @@ tbody tr:hover td .tdi{background:rgba(59,130,246,.04);}
     <input type="text" id="coSearch" placeholder="Search company…" style="min-width:135px" autocomplete="off" oninput="onCoInput()" onfocus="onCoInput()" onkeydown="onCoKey(event)"/>
     <div class="c-dd" id="coDd"></div></div>
   <div id="coTag" style="display:none;"></div>
-  <div class="sg"><label>Min:</label><select id="fMin" onchange="render()" style="min-width:60px"><option value="0">All</option><option value="10">≥10</option><option value="15">≥15</option><option value="20">≥20</option></select></div>
-  <div class="sg"><label>Stage:</label><select id="fStage" onchange="render()" style="min-width:105px"><option value="all">All</option><option value="interview">Got Interview</option><option value="no_interview">No Interview</option><option value="gd_only">GD Only</option></select></div>
   <div class="sg"><label>🏆 Round:</label>
     <select id="fRound" onchange="onRoundFilterChange()" style="min-width:128px">
       <option value="0">All Students</option>
-      <option value="1">Reached R1+</option>
-      <option value="2">Cleared R1 (R2+)</option>
-      <option value="3">Cleared R2 (R3+)</option>
-      <option value="4">Cleared R3 (R4+)</option>
+      <option value="1">Round 1</option>
+      <option value="2">Round 2</option>
+      <option value="3">Round 3</option>
+      <option value="4">Round 4</option>
     </select></div>
   <div id="roundTag" class="round-filter-active" style="display:none;"></div>
   <button class="freset" onclick="resetFilters()">↺ Reset</button>
@@ -378,36 +369,34 @@ tbody tr:hover td .tdi{background:rgba(59,130,246,.04);}
 <!-- KPI GRID — 7 cards including Processed Companies -->
 <div class="kpi-grid" id="kpiGrid">
   <div class="kpi c-blue" id="kpi-total" onclick="openDrawer('total')">
-    <div class="kpi-toprow"><div class="kpi-lbl" id="lbl-total">Total Students<button class="elbl" onclick="editLbl(event,'total')">✎</button></div><div class="kpi-actions"><button class="hide-btn" onclick="hideCard(event,'total')" title="Hide/Show">👁</button></div></div>
+    <div class="kpi-toprow"><div class="kpi-lbl" id="lbl-total">Total Students<button class="elbl" onclick="editLbl(event,'total')">✎</button></div><div class="kpi-actions"><button class="hide-btn" onclick="toggleCard(event,'total')" title="Hide/Show">👁</button></div></div>
     <input class="kpi-lbl-inp" id="inp-total" onblur="saveLbl('total')" onkeydown="lblKey(event,'total')"/>
     <div class="kpi-val" id="kStu">—</div><div class="kpi-sub">in cohort</div><div class="kpi-hint">🖱 click to list</div></div>
   <div class="kpi c-teal" id="kpi-apps" onclick="openDrawer('apps')">
-    <div class="kpi-toprow"><div class="kpi-lbl" id="lbl-apps">Applications<button class="elbl" onclick="editLbl(event,'apps')">✎</button></div><div class="kpi-actions"><button class="hide-btn" onclick="hideCard(event,'apps')" title="Hide/Show">👁</button></div></div>
+    <div class="kpi-toprow"><div class="kpi-lbl" id="lbl-apps">Applications<button class="elbl" onclick="editLbl(event,'apps')">✎</button></div><div class="kpi-actions"><button class="hide-btn" onclick="toggleCard(event,'apps')" title="Hide/Show">👁</button></div></div>
     <input class="kpi-lbl-inp" id="inp-apps" onblur="saveLbl('apps')" onkeydown="lblKey(event,'apps')"/>
     <div class="kpi-val" id="kApp">—</div><div class="kpi-sub">total sent</div><div class="kpi-hint">🖱 click to list</div></div>
   <div class="kpi c-orange" id="kpi-gd" onclick="openDrawer('gd')">
-    <div class="kpi-toprow"><div class="kpi-lbl" id="lbl-gd">GD Rounds<button class="elbl" onclick="editLbl(event,'gd')">✎</button></div><div class="kpi-actions"><button class="hide-btn" onclick="hideCard(event,'gd')" title="Hide/Show">👁</button></div></div>
+    <div class="kpi-toprow"><div class="kpi-lbl" id="lbl-gd">GD Rounds<button class="elbl" onclick="editLbl(event,'gd')">✎</button></div><div class="kpi-actions"><button class="hide-btn" onclick="toggleCard(event,'gd')" title="Hide/Show">👁</button></div></div>
     <input class="kpi-lbl-inp" id="inp-gd" onblur="saveLbl('gd')" onkeydown="lblKey(event,'gd')"/>
     <div class="kpi-val" id="kGD">—</div><div class="kpi-sub" id="kGDpct">—</div><div class="kpi-hint">🖱 click to list</div></div>
   <div class="kpi c-green" id="kpi-int" onclick="openDrawer('int')">
-    <div class="kpi-toprow"><div class="kpi-lbl" id="lbl-int">Interviews<button class="elbl" onclick="editLbl(event,'int')">✎</button></div><div class="kpi-actions"><button class="hide-btn" onclick="hideCard(event,'int')" title="Hide/Show">👁</button></div></div>
+    <div class="kpi-toprow"><div class="kpi-lbl" id="lbl-int">Interviews<button class="elbl" onclick="editLbl(event,'int')">✎</button></div><div class="kpi-actions"><button class="hide-btn" onclick="toggleCard(event,'int')" title="Hide/Show">👁</button></div></div>
     <input class="kpi-lbl-inp" id="inp-int" onblur="saveLbl('int')" onkeydown="lblKey(event,'int')"/>
     <div class="kpi-val" id="kInt">—</div><div class="kpi-sub" id="kIntPct">—</div><div class="kpi-hint">🖱 click to list</div></div>
   <div class="kpi c-red" id="kpi-zero" onclick="openDrawer('zero')">
-    <div class="kpi-toprow"><div class="kpi-lbl" id="lbl-zero">Zero Interviews<button class="elbl" onclick="editLbl(event,'zero')">✎</button></div><div class="kpi-actions"><button class="hide-btn" onclick="hideCard(event,'zero')" title="Hide/Show">👁</button></div></div>
+    <div class="kpi-toprow"><div class="kpi-lbl" id="lbl-zero">Zero Interviews<button class="elbl" onclick="editLbl(event,'zero')">✎</button></div><div class="kpi-actions"><button class="hide-btn" onclick="toggleCard(event,'zero')" title="Hide/Show">👁</button></div></div>
     <input class="kpi-lbl-inp" id="inp-zero" onblur="saveLbl('zero')" onkeydown="lblKey(event,'zero')"/>
     <div class="kpi-val" id="kZero">—</div><div class="kpi-sub">need support</div><div class="kpi-hint">🖱 click to filter</div></div>
   <div class="kpi c-purple" id="kpi-conv" onclick="openDrawer('conv')">
-    <div class="kpi-toprow"><div class="kpi-lbl" id="lbl-conv">GD→Interview<button class="elbl" onclick="editLbl(event,'conv')">✎</button></div><div class="kpi-actions"><button class="hide-btn" onclick="hideCard(event,'conv')" title="Hide/Show">👁</button></div></div>
+    <div class="kpi-toprow"><div class="kpi-lbl" id="lbl-conv">GD→Interview<button class="elbl" onclick="editLbl(event,'conv')">✎</button></div><div class="kpi-actions"><button class="hide-btn" onclick="toggleCard(event,'conv')" title="Hide/Show">👁</button></div></div>
     <input class="kpi-lbl-inp" id="inp-conv" onblur="saveLbl('conv')" onkeydown="lblKey(event,'conv')"/>
     <div class="kpi-val" id="kConv">—</div><div class="kpi-sub">conversion</div><div class="kpi-hint">🖱 click to list</div></div>
   <div class="kpi c-emerald" id="kpi-processed" onclick="openDrawer('processed')">
-    <div class="kpi-toprow"><div class="kpi-lbl" id="lbl-processed">Processed Cos<button class="elbl" onclick="editLbl(event,'processed')">✎</button></div><div class="kpi-actions"><button class="hide-btn" onclick="hideCard(event,'processed')" title="Hide/Show">👁</button></div></div>
+    <div class="kpi-toprow"><div class="kpi-lbl" id="lbl-processed">Processed Cos<button class="elbl" onclick="editLbl(event,'processed')">✎</button></div><div class="kpi-actions"><button class="hide-btn" onclick="toggleCard(event,'processed')" title="Hide/Show">👁</button></div></div>
     <input class="kpi-lbl-inp" id="inp-processed" onblur="saveLbl('processed')" onkeydown="lblKey(event,'processed')"/>
     <div class="kpi-val" id="kProcessed">—</div><div class="kpi-sub">completed drives</div><div class="kpi-hint">🖱 click to list</div></div>
 </div>
-<!-- RESTORE BAR: shows hidden cards with restore buttons -->
-<div class="restore-bar" id="restoreBar"><span class="restore-bar-label">👁 Hidden:</span><span id="restoreChips"></span></div>
 <!-- RESULT CARD -->
 <div class="result-area" id="resultArea"></div>
 <!-- FUNNEL + COMPANY STATUS CHART -->
@@ -486,7 +475,7 @@ tbody tr:hover td .tdi{background:rgba(59,130,246,.04);}
     <div class="tbl-wrap">
       <table>
         <thead><tr>
-          <th>#</th><th>Student Name</th><th>Applied</th><th style="color:var(--yellow)">Active</th><th>GD</th><th>Interviews</th>
+          <th>#</th><th>Student Name</th><th>Applied</th><th style="color:var(--yellow)">Active</th><th>GD/Assessment/Call</th><th>Interviews</th>
           <th>App→GD%</th><th>GD→Int%</th><th>App→Int%</th><th>Stage</th><th>Actions</th>
         </tr></thead>
         <tbody id="tbody"></tbody>
@@ -809,8 +798,6 @@ function allCos(){
 function filtered(){
   const q=document.getElementById('stuSearch').value.toLowerCase();
   const co=activeCo.toLowerCase();
-  const minA=parseInt(document.getElementById('fMin').value)||0;
-  const stage=document.getElementById('fStage').value;
   const roundF=parseInt(document.getElementById('fRound')?.value)||0;
   let list=students;
   if(cardFilter==='zero')list=list.filter(s=>s.interview===0);
@@ -819,12 +806,15 @@ function filtered(){
   else if(cardFilter==='processed')list=list.filter(s=>(s.int_rounds||[]).some(r=>processedCompanies.includes(r.company)));
   if(activeStu)list=list.filter(s=>s.name.toLowerCase()===activeStu.toLowerCase());
   else if(q)list=list.filter(s=>s.name.toLowerCase().includes(q));
-  if(minA)list=list.filter(s=>s.applied>=minA);
-  if(stage==='interview')list=list.filter(s=>s.interview>0);
-  if(stage==='no_interview')list=list.filter(s=>s.interview===0);
-  if(stage==='gd_only')list=list.filter(s=>s.gd>0&&s.interview===0);
-  if(co)list=list.filter(s=>[...(s.applied_list||[]),...(s.gd_list||[]),...(s.int_rounds||[]).map(r=>r.company)].some(c=>c.toLowerCase().includes(co)));
-  if(roundF>0)list=list.filter(s=>(s.int_rounds||[]).some(r=>r.round>=roundF));
+  // When BOTH company and round filters are active: show only students who reached
+  // that exact round at that specific company
+  if(co&&roundF>0){
+    list=list.filter(s=>(s.int_rounds||[]).some(r=>r.company.toLowerCase().includes(co)&&r.round===roundF));
+  } else if(co){
+    list=list.filter(s=>[...(s.applied_list||[]),...(s.gd_list||[]),...(s.int_rounds||[]).map(r=>r.company)].some(c=>c.toLowerCase().includes(co)));
+  } else if(roundF>0){
+    list=list.filter(s=>(s.int_rounds||[]).some(r=>r.round>=roundF));
+  }
   return list;
 }
 
@@ -839,12 +829,11 @@ function render(){
   set('kIntPct',tA>0?pct(tI,tA)+' rate':'—');
   set('kProcessed',processedCompanies.length);
   set('showCount',fs.length);set('totalCount',students.length);
-  // Apply hidden card classes (display:none via CSS)
+  // Apply hidden card classes
   ['total','apps','gd','int','zero','conv','processed'].forEach(id=>{
     const el=document.getElementById(`kpi-${id}`);
     if(el)el.classList.toggle('hidden-card',hiddenCards.includes(id));
   });
-  buildRestoreBar();
   buildTable(fs);buildFunnel(fs);buildCoStatusChart();buildCoPanels();
   document.getElementById('funnelLbl').textContent=funnelLabel;
   document.getElementById('tableFilterBadge').style.display=cardFilter?'inline':'none';
@@ -853,28 +842,12 @@ function render(){
 }
 function set(id,v){const el=document.getElementById(id);if(el)el.textContent=v;}
 
-/* ══ HIDE / SHOW CARD ══ */
-// hideCard — one-way hide only. Does NOT toggle. Cards get display:none.
-function hideCard(e,id){
+/* ══ HIDE CARD ══ */
+function toggleCard(e,id){
   e.stopPropagation();
-  if(!hiddenCards.includes(id)){hiddenCards.push(id);}
-  saveStorage();render();toast(`👁 "${cardLabels[id]||id}" hidden — restore below`);
-}
-// showCard — called from the restore bar only
-function showCard(id){
-  hiddenCards=hiddenCards.filter(h=>h!==id);
-  saveStorage();render();toast(`✓ "${cardLabels[id]||id}" restored`);
-}
-// toggleCard kept for Firebase backward compat (old saves may reference it)
-function toggleCard(e,id){hideCard(e,id);}
-// Build the restore bar below the KPI grid
-function buildRestoreBar(){
-  const bar=document.getElementById('restoreBar');
-  const chips=document.getElementById('restoreChips');
-  if(!bar||!chips)return;
-  if(!hiddenCards.length){bar.classList.remove('visible');chips.innerHTML='';return;}
-  bar.classList.add('visible');
-  chips.innerHTML=hiddenCards.map(id=>`<span class="restore-chip">${E(cardLabels[id]||id)}<button onclick="showCard('${id}')" title="Show card">👁 Show</button></span>`).join('');
+  const idx=hiddenCards.indexOf(id);
+  if(idx>=0)hiddenCards.splice(idx,1);else hiddenCards.push(id);
+  saveStorage();render();toast(hiddenCards.includes(id)?`👁 "${cardLabels[id]||id}" card hidden`:`👁 "${cardLabels[id]||id}" card visible`);
 }
 
 /* ══ TABLE ══ */
@@ -921,12 +894,14 @@ function buildExpandHTML(s,ri){
     :'<span style="color:var(--muted);font-style:italic;font-size:10.5px">None</span>';
 
   const activeChips=activeCos.length
-    ?activeCos.map(c=>`<span class="exp-chip act">${E(c)}</span>`).join('')
+    ?activeCos.map(c=>`<span class="exp-chip act">${E(c)}<button onclick="removeFromActiveCompanies('${c.replace(/'/g,"\\'")}',${ri})" title="Remove from Active">✕</button></span>`).join('')
     :'<span style="color:var(--muted);font-style:italic;font-size:10.5px">None</span>';
 
   // Dropdown: companies in applied_list NOT already in activeCompanies
-  const addActiveOpts=''; // intentionally empty — manage active cos via Company Tracking panel only
-  
+  const addActiveOpts=(s.applied_list||[])
+    .filter(c=>!activeCompanies.some(a=>a.toLowerCase()===c.toLowerCase()))
+    .map(c=>`<option value="${E(c)}">${E(c)}</option>`).join('');
+
   const gdChips=s.gd_list.length
     ?s.gd_list.map((c,i)=>`<span class="exp-chip gd">${E(c)}<button onclick="confirmRemoveFromStu(${ri},'gd',${i})" title="Remove">✕</button></span>`).join('')
     :'<span style="color:var(--muted);font-style:italic;font-size:10.5px">None</span>';
@@ -951,7 +926,10 @@ function buildExpandHTML(s,ri){
     <div>
       <div class="exp-sec-title" style="color:var(--yellow)">⚡ Active (${activeCos.length})</div>
       <div class="exp-chips">${activeChips}</div>
-      <div style="font-size:9px;color:var(--muted);margin-top:5px;font-style:italic;">📌 View only · manage Active list via Company Tracking panel</div>
+      ${addActiveOpts
+        ?`<div class="add-chip-row"><select id="add-active-${ri}"><option value="">Add to Active…</option>${addActiveOpts}</select><button class="ai-btn" style="background:rgba(234,179,8,.12);color:var(--yellow);border-color:rgba(234,179,8,.3);" onclick="addToActiveCompanies(${ri})">＋</button></div>`
+        :`<div style="font-size:9.5px;color:var(--muted);margin-top:6px;font-style:italic;">All applied companies are active.</div>`
+      }
     </div>
     <div>
       <div class="exp-sec-title c-gd">📝 GD (${s.gd_list.length})</div>
@@ -1031,8 +1009,11 @@ async function removeFromActiveCompanies(co,ri){
 function onRoundFilterChange(){
   const v=parseInt(document.getElementById('fRound')?.value)||0;
   const tag=document.getElementById('roundTag');
-  if(v>0){const ls=['','Reached R1+','Cleared R1 (R2+)','Cleared R2 (R3+)','Cleared R3 (R4+)'];tag.style.display='flex';tag.innerHTML=`🏆 ${ls[v]||'R'+v} <button onclick="clearRoundFilter()" style="background:none;border:none;cursor:pointer;color:var(--yellow);font-size:13px;padding:0 0 0 4px;">✕</button>`;}
-  else tag.style.display='none';
+  if(v>0){
+    const coLabel=activeCo?` @ ${activeCo}`:'';
+    tag.style.display='flex';
+    tag.innerHTML=`🏆 Round ${v}${coLabel} <button onclick="clearRoundFilter()" style="background:none;border:none;cursor:pointer;color:var(--yellow);font-size:13px;padding:0 0 0 4px;">✕</button>`;
+  } else tag.style.display='none';
   render();
 }
 function clearRoundFilter(){document.getElementById('fRound').value='0';document.getElementById('roundTag').style.display='none';render();}
@@ -1044,7 +1025,7 @@ function buildFunnel(fs){
     type:'bar',
     data:{labels:fs.map(s=>s.name.split(' ').slice(0,2).join(' ')),datasets:[
       {label:'Applied',data:fs.map(s=>s.applied),backgroundColor:'rgba(59,130,246,.7)',borderRadius:3},
-      {label:'GD',data:fs.map(s=>s.gd),backgroundColor:'rgba(249,115,22,.75)',borderRadius:3},
+      {label:'GD/Assessment/Call',data:fs.map(s=>s.gd),backgroundColor:'rgba(249,115,22,.75)',borderRadius:3},
       {label:'Interviews',data:fs.map(s=>s.interview),backgroundColor:'rgba(34,197,94,.85)',borderRadius:3},
     ]},
     options:{responsive:true,maintainAspectRatio:false,
@@ -1077,7 +1058,7 @@ function buildCoStatusChart(){
     type:'bar',
     data:{labels:combined,datasets:[
       {label:'Applied',data:appData,backgroundColor:combined.map((_,i)=>isActive[i]?'rgba(234,179,8,.65)':'rgba(16,185,129,.55)'),borderRadius:3},
-      {label:'GD',data:gdData,backgroundColor:combined.map((_,i)=>isActive[i]?'rgba(249,115,22,.75)':'rgba(6,182,212,.65)'),borderRadius:3},
+      {label:'GD/Assessment/Call',data:gdData,backgroundColor:combined.map((_,i)=>isActive[i]?'rgba(249,115,22,.75)':'rgba(6,182,212,.65)'),borderRadius:3},
       {label:'Interviews',data:ivData,backgroundColor:combined.map((_,i)=>isActive[i]?'rgba(239,68,68,.75)':'rgba(59,130,246,.75)'),borderRadius:3},
     ]},
     options:{responsive:true,maintainAspectRatio:false,
@@ -1165,7 +1146,7 @@ function moveToProcessed(name){
   if(!processedCompanies.some(c=>c.toLowerCase()===name.toLowerCase()))processedCompanies.push(name);
   saveStorage();render();toast(`✅ "${name}" → Processed`);
 }
-function selCoFromPanel(name){activeCo=name;activeStu='';document.getElementById('coSearch').value='';document.getElementById('coTag').style.display='flex';document.getElementById('coTag').innerHTML=`<div class="atag atag-c">🏢 ${E(name)}<button onclick="clearCo()">✕</button></div>`;document.getElementById('stuTag').style.display='none';render();document.getElementById('resultArea').scrollIntoView({behavior:'smooth',block:'nearest'});}
+function selCoFromPanel(name){activeCo=name;activeStu='';document.getElementById('coSearch').value='';document.getElementById('coTag').style.display='flex';document.getElementById('coTag').innerHTML=`<div class="atag atag-c">🏢 ${E(name)}<button onclick="clearCo()">✕</button></div>`;document.getElementById('stuTag').style.display='none';onRoundFilterChange();render();document.getElementById('resultArea').scrollIntoView({behavior:'smooth',block:'nearest'});}
 
 /* ══ COMPANY REMOVE MODAL ══ */
 function openRmModal(name){
@@ -1336,13 +1317,16 @@ const DCFG={
   conv:{title:()=>cardLabels.conv,filter:s=>s.gd>0,desc:'By GD→Int conv.',sort:(a,b)=>(b.interview/b.gd)-(a.interview/a.gd)},
   processed:{title:()=>cardLabels.processed,filter:s=>(s.int_rounds||[]).some(r=>processedCompanies.some(p=>p.toLowerCase()===r.company.toLowerCase())),desc:'Interviewed at processed companies',sort:(a,b)=>b.interview-a.interview}
 };
-function openDrawer(type){if(activeDrawer===type){closeDrawer();clearCardFilter();return;}document.querySelectorAll('.kpi').forEach(k=>k.classList.remove('active'));document.getElementById(`kpi-${type}`).classList.add('active');activeDrawer=type;cardFilter=type;document.getElementById('dSearch').value='';set('dTitle',DCFG[type].title());document.getElementById('dov').classList.add('open');document.getElementById('drawer').classList.add('open');renderDrawer();render();}
+function openDrawer(type){if(hiddenCards.includes(type)){toast('👁 Card is hidden — click the eye icon to show it first');return;}if(activeDrawer===type){closeDrawer();clearCardFilter();return;}document.querySelectorAll('.kpi').forEach(k=>k.classList.remove('active'));document.getElementById(`kpi-${type}`).classList.add('active');activeDrawer=type;cardFilter=type;document.getElementById('dSearch').value='';set('dTitle',DCFG[type].title());document.getElementById('dov').classList.add('open');document.getElementById('drawer').classList.add('open');renderDrawer();render();}
 function closeDrawer(){activeDrawer=null;document.querySelectorAll('.kpi').forEach(k=>k.classList.remove('active'));document.getElementById('dov').classList.remove('open');document.getElementById('drawer').classList.remove('open');}
 function clearCardFilter(){cardFilter=null;closeDrawer();render();}
 function renderDrawer(){
   if(!activeDrawer)return;
   const cfg=DCFG[activeDrawer];const q=document.getElementById('dSearch').value.toLowerCase();
-  let list=students.filter(cfg.filter);if(q)list=list.filter(s=>s.name.toLowerCase().includes(q));if(cfg.sort)list=[...list].sort(cfg.sort);
+  // Use filtered() — respects all active search/stage/company/round filters — then
+  // apply the card's own sub-filter so the drawer shows only the relevant subset
+  // of whatever is currently visible in the table.
+  let list=filtered().filter(cfg.filter);if(q)list=list.filter(s=>s.name.toLowerCase().includes(q));if(cfg.sort)list=[...list].sort(cfg.sort);
   set('dCount',`${list.length} student${list.length!==1?'s':''} · ${cfg.desc}`);
   if(!list.length){document.getElementById('dbody').innerHTML='<div class="dempty">😶<br/>No students match.</div>';return;}
   const cl=s=>activeDrawer==='gd'?(s.gd_list||[]):activeDrawer==='int'||activeDrawer==='conv'||activeDrawer==='processed'?(s.int_list||[]):(s.applied_list||[]);
@@ -1404,7 +1388,7 @@ function buildCoTabBody(){
     const allRounds=[];students.forEach((s,ri)=>{(s.int_rounds||[]).forEach((r,i)=>{if(r.company.toLowerCase()===co)allRounds.push({s,ri,r,i});});});
     const byRound={};allRounds.forEach(e=>{if(!byRound[e.r.round])byRound[e.r.round]=[];byRound[e.r.round].push(e);});
     const rKeys=Object.keys(byRound).sort((a,b)=>+a-+b);
-    let html=rKeys.length?rKeys.map(rn=>`<div style="margin-bottom:10px"><div class="round-label"><span class="round-badge ${+rn===1?'r1':+rn===2?'r2':'r3'}">Round ${rn}</span></div>${byRound[rn].map(e=>`<div class="co-entry-row"><div><div class="co-entry-name">${E(e.s.name)}</div><div class="co-entry-meta">${e.r.date?'📅 '+e.r.date:'No date'}</div></div><button class="co-entry-del" onclick="confirmCoRemoveRound(${e.ri},${e.i})">Remove</button></div>`).join('')}</div>`).join(''):'<div style="color:var(--muted);font-size:12px;font-style:italic;padding:10px 0">No rounds yet.</div>';
+    let html=rKeys.length?rKeys.map(rn=>`<div style="margin-bottom:10px"><div class="round-label"><span class="round-badge ${+rn===1?'r1':+rn===2?'r2':'r3'}">Round ${rn}</span></div>${byRound[rn].map(e=>`<div class="co-entry-row"><div style="flex:1"><div class="co-entry-name">${E(e.s.name)}</div><div class="co-entry-meta" style="display:flex;align-items:center;gap:6px;margin-top:3px"><span>${e.r.date?'📅 '+e.r.date:'No date set'}</span><input type="date" id="edate-${e.ri}-${e.idx}" value="${e.r.date}" style="background:var(--inp);color:var(--text);border:1px solid var(--border2);border-radius:4px;padding:2px 5px;font-size:10px;font-family:inherit;" title="Edit interview date"/><button style="background:rgba(59,130,246,.12);color:var(--accent);border:1px solid rgba(59,130,246,.3);border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700;cursor:pointer;" onclick="updateIntDate(${e.ri},${e.idx},document.getElementById('edate-${e.ri}-${e.idx}').value)">💾</button></div></div><button class="co-entry-del" onclick="confirmCoRemoveRound(${e.ri},${e.i})">Remove</button></div>`).join('')}</div>`).join(''):'<div style="color:var(--muted);font-size:12px;font-style:italic;padding:10px 0">No rounds yet.</div>';
     html+=`<div class="co-add-form">
       <label>Add Interview Round</label>
       <select id="coa-stu-int" style="margin-bottom:6px"><option value="">Select student…</option>${students.map((s,ri)=>`<option value="${ri}">${E(s.name)}</option>`).join('')}</select>
@@ -1428,20 +1412,33 @@ async function coAddAllStudents(section){
   const coName=coModalCo;
   const rnd=section==='int'?(parseInt(document.getElementById('coa-round')?.value)||1):1;
   const date=section==='int'?(document.getElementById('coa-date')?.value||''):'';
-  let count=0;
+  let added=0,updated=0;
   students.forEach(s=>{
-    if(section==='app'){if(!(s.applied_list||[]).some(c=>c.toLowerCase()===coName.toLowerCase())){s.applied_list.push(coName);count++;}}
-    else if(section==='gd'){
+    if(section==='app'){
+      if(!(s.applied_list||[]).some(c=>c.toLowerCase()===coName.toLowerCase())){s.applied_list.push(coName);added++;}
+    }else if(section==='gd'){
       if(!(s.applied_list||[]).some(c=>c.toLowerCase()===coName.toLowerCase()))s.applied_list.push(coName);
-      if(!(s.gd_list||[]).some(c=>c.toLowerCase()===coName.toLowerCase())){s.gd_list.push(coName);count++;}
+      if(!(s.gd_list||[]).some(c=>c.toLowerCase()===coName.toLowerCase())){s.gd_list.push(coName);added++;}
     }else{
+      // Ensure in applied list
       if(!(s.applied_list||[]).some(c=>c.toLowerCase()===coName.toLowerCase()))s.applied_list.push(coName);
-      s.int_rounds.push({company:coName,round:rnd,date});count++;
+      // UPSERT: update existing date if entry exists, otherwise add new entry
+      const existIdx=(s.int_rounds||[]).findIndex(r=>r.company.toLowerCase()===coName.toLowerCase()&&r.round===rnd);
+      if(existIdx>=0){
+        s.int_rounds[existIdx].date=date;updated++;
+      }else{
+        s.int_rounds.push({company:coName,round:rnd,date});added++;
+      }
+      // Expand all updated students so date changes are visible immediately
+      const ri=students.indexOf(s);if(ri>=0)expandedRows.add(ri);
     }
     norm(s);
   });
-  await saveStorage();render();buildCoTabBody();toast(`✓ Added all ${count} students to ${section}`);
+  await saveStorage();render();buildCoTabBody();
+  if(section==='int')toast(`✓ ${added} new rounds added · ${updated} dates updated${date?' → '+date:''}`);
+  else toast(`✓ ${added} students added to ${section}`);
 }
+
 
 async function coAddStudent(section){
   let ri;
@@ -1452,11 +1449,44 @@ async function coAddStudent(section){
   const s=students[ri];const coName=coModalCo;
   const rnd=section==='int'?(parseInt(document.getElementById('coa-round')?.value)||1):1;
   const date=section==='int'?(document.getElementById('coa-date')?.value||''):'';
-  if(section==='app'){if(!s.applied_list.some(c=>c.toLowerCase()===coName.toLowerCase()))s.applied_list.push(coName);}
-  else if(section==='gd'){if(!s.applied_list.some(c=>c.toLowerCase()===coName.toLowerCase()))s.applied_list.push(coName);if(!s.gd_list.some(c=>c.toLowerCase()===coName.toLowerCase()))s.gd_list.push(coName);}
-  else{if(!s.applied_list.some(c=>c.toLowerCase()===coName.toLowerCase()))s.applied_list.push(coName);s.int_rounds.push({company:coName,round:rnd,date});}
-  norm(s);await saveStorage();render();buildCoTabBody();toast(`✓ Added`);
+  if(section==='app'){
+    if(!s.applied_list.some(c=>c.toLowerCase()===coName.toLowerCase()))s.applied_list.push(coName);
+    toast('✓ Added to Applied');
+  }else if(section==='gd'){
+    if(!s.applied_list.some(c=>c.toLowerCase()===coName.toLowerCase()))s.applied_list.push(coName);
+    if(!s.gd_list.some(c=>c.toLowerCase()===coName.toLowerCase()))s.gd_list.push(coName);
+    toast('✓ Added to GD');
+  }else{
+    // Ensure company is in applied list
+    if(!s.applied_list.some(c=>c.toLowerCase()===coName.toLowerCase()))s.applied_list.push(coName);
+    // UPSERT: if student already has this company + round number, update the date only.
+    // Otherwise push a fresh entry. This makes the date selected here immediately
+    // visible in the student's Interview Rounds row in the table below.
+    const existIdx=s.int_rounds.findIndex(r=>r.company.toLowerCase()===coName.toLowerCase()&&r.round===rnd);
+    if(existIdx>=0){
+      s.int_rounds[existIdx].date=date;
+      toast(date?`✓ Date updated → ${date} (${s.name} · R${rnd})`:`✓ Date cleared for ${s.name} · R${rnd}`);
+    }else{
+      s.int_rounds.push({company:coName,round:rnd,date});
+      toast(`✓ Round ${rnd} added for ${s.name}${date?' · '+date:''}`);
+    }
+    // Auto-expand this student's row so the change is immediately visible in the table
+    const ri2=students.indexOf(s);if(ri2>=0)expandedRows.add(ri2);
+  }
+  norm(s);await saveStorage();render();buildCoTabBody();
 }
+/* Update the date on an existing int_round entry directly from the company modal.
+   The change is saved to Firebase and the student's row auto-expands to show it. */
+async function updateIntDate(ri,roundIdx,newDate){
+  const s=students[ri];
+  if(!s||!s.int_rounds[roundIdx]){toast('⚠ Round not found');return;}
+  s.int_rounds[roundIdx].date=newDate;
+  norm(s);
+  expandedRows.add(ri); // auto-expand so change is visible in table
+  await saveStorage();render();buildCoTabBody();
+  toast(newDate?`✓ Date set → ${newDate}`:'✓ Date cleared');
+}
+
 function confirmCoRemove(ri,section,co){const s=students[ri];confirmAction(`Remove ${s.name} from ${section}?`,`Removes "${co}" from ${section} list.`,'Remove',async()=>{if(section==='applied')s.applied_list=s.applied_list.filter(c=>c.toLowerCase()!==co.toLowerCase());else s.gd_list=s.gd_list.filter(c=>c.toLowerCase()!==co.toLowerCase());norm(s);await saveStorage();render();buildCoTabBody();toast('✓ Removed');});}
 function confirmCoRemoveRound(ri,idx){const s=students[ri];const r=s.int_rounds[idx];confirmAction(`Remove Round ${r.round} at ${r.company}?`,''  ,'Remove',async()=>{s.int_rounds.splice(idx,1);norm(s);await saveStorage();render();buildCoTabBody();toast('✓ Removed');});}
 
@@ -1535,28 +1565,177 @@ async function clearAllStudents(){
 }
 
 /* ══ UTILS ══ */
-function resetFilters(){activeStu='';activeCo='';cardFilter=null;document.getElementById('stuSearch').value='';document.getElementById('coSearch').value='';document.getElementById('fMin').value='0';document.getElementById('fStage').value='all';document.getElementById('fRound').value='0';document.getElementById('stuTag').style.display='none';document.getElementById('coTag').style.display='none';document.getElementById('roundTag').style.display='none';closeDrawer();render();}
+function resetFilters(){activeStu='';activeCo='';cardFilter=null;document.getElementById('stuSearch').value='';document.getElementById('coSearch').value='';document.getElementById('fRound').value='0';document.getElementById('stuTag').style.display='none';document.getElementById('coTag').style.display='none';document.getElementById('roundTag').style.display='none';closeDrawer();render();}
 let toastT;
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.style.display='block';clearTimeout(toastT);toastT=setTimeout(()=>el.style.display='none',3200);}
-function exportCSV(){const r=[['Name','Applied','GD','Interviews','App→GD%','GD→Int%','App→Int%','Highest Round','Companies Applied','GD Companies','Interview Companies']];students.forEach(s=>{const maxR=Math.max(0,...(s.int_rounds||[]).map(r=>r.round));r.push([`"${s.name}"`,s.applied,s.gd,s.interview,pct(s.gd,s.applied),pct(s.interview,s.gd),pct(s.interview,s.applied),maxR||'—',`"${(s.applied_list||[]).join('; ')}"`,`"${(s.gd_list||[]).join('; ')}"`,`"${uniq((s.int_rounds||[]).map(r=>r.company)).join('; ')}"`]);});const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(r.map(x=>x.join(',')).join('\n'));a.download='Placement_v9.csv';a.click();toast('📥 Exported');}
+
+/* ══ EXPORT EXCEL ══ */
+function exportXLSX(){
+  const wb = XLSX.utils.book_new();
+  const today = todayStr();
+
+  /* ─── helpers ─── */
+  const styleHeader = (ws, range) => {
+    // SheetJS CE doesn't support cell styles, but we set col widths & freeze
+    return ws;
+  };
+  const setColWidths = (ws, widths) => {
+    ws['!cols'] = widths.map(w => ({ wch: w }));
+    return ws;
+  };
+  const freezeRow = (ws, row=1) => {
+    ws['!freeze'] = { xSplit: 0, ySplit: row };
+    return ws;
+  };
+
+  /* ══ SHEET 1: Student Summary ══ */
+  const sumHeaders = [
+    'S.No','Name','Total Applied','GD Rounds','Interviews',
+    'App→GD %','GD→Int %','App→Int %','Highest Round',
+    'Active Company Count','Processed Company Count',
+    'Companies Applied','GD Companies','Interview Companies'
+  ];
+  const sumRows = students.map((s, i) => {
+    const maxR = Math.max(0, ...(s.int_rounds||[]).map(r => r.round));
+    const ag = s.applied>0 ? +(s.gd/s.applied*100).toFixed(1) : 0;
+    const gi = s.gd>0     ? +(s.interview/s.gd*100).toFixed(1) : 0;
+    const ai = s.applied>0 ? +(s.interview/s.applied*100).toFixed(1) : 0;
+    const activeCnt  = (s.applied_list||[]).filter(c=>activeCompanies.some(a=>a.toLowerCase()===c.toLowerCase())).length;
+    const processedCnt = (s.int_rounds||[]).filter(r=>processedCompanies.some(p=>p.toLowerCase()===r.company.toLowerCase())).length;
+    return [
+      i+1,
+      s.name,
+      s.applied,
+      s.gd,
+      s.interview,
+      ag,
+      gi,
+      ai,
+      maxR || 0,
+      activeCnt,
+      processedCnt,
+      (s.applied_list||[]).join(', '),
+      (s.gd_list||[]).join(', '),
+      uniq((s.int_rounds||[]).map(r=>r.company)).join(', ')
+    ];
+  });
+  // Summary totals row
+  const tA=students.reduce((x,s)=>x+s.applied,0);
+  const tG=students.reduce((x,s)=>x+s.gd,0);
+  const tI=students.reduce((x,s)=>x+s.interview,0);
+  const totRow=['TOTAL','',tA,tG,tI,
+    tA>0?+(tG/tA*100).toFixed(1):0,
+    tG>0?+(tI/tG*100).toFixed(1):0,
+    tA>0?+(tI/tA*100).toFixed(1):0,
+    '','','','','',''];
+  const ws1 = XLSX.utils.aoa_to_sheet([sumHeaders, ...sumRows, totRow]);
+  setColWidths(ws1,[5,22,14,11,11,11,11,11,13,18,20,45,35,40]);
+  ws1['!freeze']={xSplit:0,ySplit:1};
+  XLSX.utils.book_append_sheet(wb, ws1, 'Student Summary');
+
+  /* ══ SHEET 2: Interview Rounds Detail ══ */
+  const rHeaders = ['S.No','Student Name','Company','Round No.','Date'];
+  let rIdx=1;
+  const rRows=[];
+  students.forEach(s=>{
+    (s.int_rounds||[]).forEach(r=>{
+      rRows.push([rIdx++, s.name, r.company, r.round, r.date||'']);
+    });
+  });
+  const ws2 = XLSX.utils.aoa_to_sheet([rHeaders, ...rRows]);
+  setColWidths(ws2,[5,22,25,10,14]);
+  ws2['!freeze']={xSplit:0,ySplit:1};
+  XLSX.utils.book_append_sheet(wb, ws2, 'Interview Rounds');
+
+  /* ══ SHEET 3: Company Overview ══ */
+  const cos = allCos();
+  const coHeaders = ['S.No','Company','Status','Students Applied','Students in GD','Students in Interviews','Max Round Reached'];
+  const coRows = cos.map((c,i)=>{
+    const lc=c.toLowerCase();
+    const appCnt = students.filter(s=>(s.applied_list||[]).some(x=>x.toLowerCase()===lc)).length;
+    const gdCnt  = students.filter(s=>(s.gd_list||[]).some(x=>x.toLowerCase()===lc)).length;
+    const ivCnt  = students.filter(s=>(s.int_rounds||[]).some(r=>r.company.toLowerCase()===lc)).length;
+    const maxR   = Math.max(0,...students.flatMap(s=>(s.int_rounds||[]).filter(r=>r.company.toLowerCase()===lc).map(r=>r.round)));
+    const status = processedCompanies.some(p=>p.toLowerCase()===lc)?'✅ Processed':activeCompanies.some(a=>a.toLowerCase()===lc)?'⚡ Active':'—';
+    return [i+1, c, status, appCnt, gdCnt, ivCnt, maxR||0];
+  });
+  const ws3 = XLSX.utils.aoa_to_sheet([coHeaders, ...coRows]);
+  setColWidths(ws3,[5,28,14,16,14,18,16]);
+  ws3['!freeze']={xSplit:0,ySplit:1};
+  XLSX.utils.book_append_sheet(wb, ws3, 'Company Overview');
+
+  /* ══ SHEET 4: Active & Processed Companies ══ */
+  const cpHeaders = ['S.No','Company','List','Students Applied','Students in GD','Students Interviewed'];
+  const acRows = activeCompanies.map((c,i)=>{
+    const lc=c.toLowerCase();
+    return [i+1, c, 'Active',
+      students.filter(s=>(s.applied_list||[]).some(x=>x.toLowerCase()===lc)).length,
+      students.filter(s=>(s.gd_list||[]).some(x=>x.toLowerCase()===lc)).length,
+      students.filter(s=>(s.int_rounds||[]).some(r=>r.company.toLowerCase()===lc)).length
+    ];
+  });
+  const pcRows = processedCompanies.map((c,i)=>{
+    const lc=c.toLowerCase();
+    return [activeCompanies.length+i+1, c, 'Processed',
+      students.filter(s=>(s.applied_list||[]).some(x=>x.toLowerCase()===lc)).length,
+      students.filter(s=>(s.gd_list||[]).some(x=>x.toLowerCase()===lc)).length,
+      students.filter(s=>(s.int_rounds||[]).some(r=>r.company.toLowerCase()===lc)).length
+    ];
+  });
+  const ws4 = XLSX.utils.aoa_to_sheet([cpHeaders, ...acRows, ...pcRows]);
+  setColWidths(ws4,[5,28,12,16,14,18]);
+  ws4['!freeze']={xSplit:0,ySplit:1};
+  XLSX.utils.book_append_sheet(wb, ws4, 'Active & Processed Cos');
+
+  /* ══ SHEET 5: Cohort Stats ══ */
+  const statsData = [
+    ['CII Mumbai Placement Tracker — Cohort Summary', ''],
+    ['Generated on', today],
+    ['',''],
+    ['Metric','Value'],
+    ['Total Students', students.length],
+    ['Total Applications Sent', tA],
+    ['Total GD Rounds', tG],
+    ['Total Interviews', tI],
+    ['Students with Zero Interviews', students.filter(s=>s.interview===0).length],
+    ['Students with at least 1 Interview', students.filter(s=>s.interview>0).length],
+    ['GD Conversion Rate (App→GD)', tA>0?(tG/tA*100).toFixed(1)+'%':'—'],
+    ['Interview Conversion Rate (GD→Int)', tG>0?(tI/tG*100).toFixed(1)+'%':'—'],
+    ['Overall Conversion (App→Int)', tA>0?(tI/tA*100).toFixed(1)+'%':'—'],
+    ['',''],
+    ['Active Companies', activeCompanies.length],
+    ['Processed Companies', processedCompanies.length],
+    ['Total Unique Companies', allCos().length],
+    ['',''],
+    ['Active Companies List', activeCompanies.join(', ')],
+    ['Processed Companies List', processedCompanies.join(', ')],
+  ];
+  const ws5 = XLSX.utils.aoa_to_sheet(statsData);
+  setColWidths(ws5,[36,50]);
+  XLSX.utils.book_append_sheet(wb, ws5, 'Cohort Stats');
+
+  /* ── Download ── */
+  XLSX.writeFile(wb, `CII_Mumbai_Placement_Tracker_${today}.xlsx`);
+  toast('📊 Excel exported — 5 sheets');
+}
 
 /* ══ INIT ══ */
 listenToFirebase();
 
 /* ══ EXPOSE TO WINDOW (required for type="module" + inline handlers) ══ */
 Object.assign(window,{
-  openCoModal,openXLModal,exportCSV,clearAllStudents,openModal,
+  openCoModal,openXLModal,exportXLSX,clearAllStudents,openModal,
   onStuInput,onStuKey,onCoInput,onCoKey,clearStu,clearCo,onRoundFilterChange,clearRoundFilter,
-  openDrawer,editLbl,saveLbl,lblKey,toggleCard,hideCard,showCard,buildRestoreBar,
+  openDrawer,editLbl,saveLbl,lblKey,toggleCard,
   editFunnelLbl,saveFunnelLbl,funnelLblKey,
   clearCardFilter,selectStu,selCoFromPanel,
   addCpCo,onCpSelInput,onCpSelKey,selCpCo,moveToProcessed,
   openRmModal,closeRmModal,rmMovClick,toggleRmOpt,execRmModal,execCardOnlyRemove,
   toggleExpand,inlineEdit,openEdit,delStu,
-  confirmRemoveFromStu,confirmRemoveIntRound,addIntRoundInline,addListEntry,setToday,
+  confirmRemoveFromStu,confirmRemoveIntRound,addIntRoundInline,addListEntry,addToActiveCompanies,removeFromActiveCompanies,setToday,
   closeDrawer,renderDrawer,closeConfirm,
   closeCoModal,coMovClick,onCoModalInput,onCoModalKey,setCoModal,switchCoTab,
-  coAddStudent,coAddAllStudents,confirmCoRemove,confirmCoRemoveRound,
+  coAddStudent,coAddAllStudents,confirmCoRemove,confirmCoRemoveRound,updateIntDate,
   closeModal,movClick,saveStudent,toggleStuDd,filterStuOpts,selModalStu,
   focusTi,onTI,onTK,addTag,rmTag,
   closeXLModal,xlMovClick,xlDrag,xlDragEnd,xlDropEvt,xlFileChange,applyXLData,
